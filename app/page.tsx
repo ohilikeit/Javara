@@ -1,4 +1,4 @@
-import { RoomReservation } from "@/components/room-reservation"
+import { RoomReservation } from "@/src/room-reservation"
 
 export default function Page() {
   return <RoomReservation />

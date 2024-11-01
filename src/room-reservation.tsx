@@ -3,20 +3,20 @@
 import * as React from "react"
 import { Calendar, Search, MessageCircle } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { Button } from "@/src/components/button"
+import { Calendar as CalendarComponent } from "@/src/components/calendar"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from "@/src/components/popover"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/src/components/select"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,12 +26,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/src/components/alert-dialog"
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from "@/components/ui/hover-card"
+} from "@/src/components/hover-card"
 
 interface Reservation {
   time: string;
