@@ -44,7 +44,7 @@ type Reservations = {
 
 // Sample reservation data
 const reservations = {
-  1: [{ time: "10:00", name: "김철수" }],
+  1: [{ time: "16:00", name: "김철수" }],
   4: [{ time: "14:00", name: "이영희" }],
   5: [{ time: "15:00", name: "박지성" }],
   6: [{ time: "11:00", name: "손흥민" }],
@@ -137,9 +137,12 @@ export function RoomReservation() {
               <HoverCardContent 
                 className="w-80"
                 style={{
-                  position: 'fixed',
-                  left: `${mousePosition.x + 10}px`,
-                  top: `${mousePosition.y + 10}px`,
+                  position: 'absolute',
+                  left: `${mousePosition.x + 1}px`,
+                  top: `${mousePosition.y + 1}px`,
+                  transform: 'translate(-50%, -50%)',
+                  maxWidth: 'calc(100vw - 48px)',
+                  maxHeight: 'calc(100vh - 48px)',
                 }}
               >
                 <TimeTable roomNumber={1} />
@@ -156,9 +159,12 @@ export function RoomReservation() {
               <HoverCardContent 
                 className="w-80"
                 style={{
-                  position: 'fixed',
-                  left: `${mousePosition.x + 10}px`,
-                  top: `${mousePosition.y + 10}px`,
+                  position: 'absolute',
+                  left: `${mousePosition.x + 1}px`,
+                  top: `${mousePosition.y + 1}px`,
+                  transform: 'translate(-50%, -50%)',
+                  maxWidth: 'calc(100vw - 48px)',
+                  maxHeight: 'calc(100vh - 48px)',
                 }}
               >
                 <TimeTable roomNumber={4} />
@@ -172,9 +178,12 @@ export function RoomReservation() {
               <HoverCardContent 
                 className="w-80"
                 style={{
-                  position: 'fixed',
-                  left: `${mousePosition.x + 10}px`,
-                  top: `${mousePosition.y + 10}px`,
+                  position: 'absolute',
+                  left: `${mousePosition.x + 1}px`,
+                  top: `${mousePosition.y + 1}px`,
+                  transform: 'translate(-50%, -50%)',
+                  maxWidth: 'calc(100vw - 48px)',
+                  maxHeight: 'calc(100vh - 48px)',
                 }}
               >
                 <TimeTable roomNumber={5} />
@@ -188,9 +197,12 @@ export function RoomReservation() {
               <HoverCardContent 
                 className="w-80"
                 style={{
-                  position: 'fixed',
-                  left: `${mousePosition.x + 10}px`,
-                  top: `${mousePosition.y + 10}px`,
+                  position: 'absolute',
+                  left: `${mousePosition.x + 1}px`,
+                  top: `${mousePosition.y + 1}px`,
+                  transform: 'translate(-50%, -50%)',
+                  maxWidth: 'calc(100vw - 48px)',
+                  maxHeight: 'calc(100vh - 48px)',
                 }}
               >
                 <TimeTable roomNumber={6} />
