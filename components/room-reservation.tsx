@@ -41,15 +41,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 
-// Sample reservation data with explicit type
-const reservations: Record<string, { time: string; name: string }[]> = {
+// Sample reservation data
+const reservations = {
   1: [{ time: "10:00", name: "김철수" }],
   4: [{ time: "14:00", name: "이영희" }],
   5: [{ time: "15:00", name: "박지성" }],
   6: [{ time: "11:00", name: "손흥민" }],
 }
 
-export default function Component() {
+export function RoomReservation() {
   const [date, setDate] = React.useState<Date>()
   const [timeSlot, setTimeSlot] = React.useState<string>()
   const [selectedRoom, setSelectedRoom] = React.useState<number | null>(null)
@@ -285,7 +285,7 @@ function TimeTable({ roomNumber }: { roomNumber: number }) {
           >
             <span className="w-1/2 text-center">{time}</span>
             <span className="w-1/2 text-center">
-              {isReserved(time) ? reservations[roomNumber]?.find(r => r.time === time)?.name : '예약가능'}
+              {isReserved(time) ? reservations[roomNumber].find(r => r.time === time)?.name : '예약가능'}
             </span>
           </div>
         ))}
@@ -314,13 +314,13 @@ function AllRoomsTimetable() {
             <tr key={time} className="hover:bg-gray-50">
               <td className="border-b border-gray-200 p-2 text-center">{time}</td>
               {roomNumbers.map(roomNumber => {
-                const isReserved = reservations[roomNumber.toString()]?.some(r => r.time === time);
+                const isReserved = reservations[roomNumber]?.some(r => r.time === time);
                 return (
                   <td 
                     key={`${roomNumber}-${time}`} 
                     className={`border-b border-gray-200 p-2 text-center ${isReserved ? 'bg-[#bcc6d7] text-[#3b547b]' : 'text-[#3b547b]'}`}
                   >
-                    {reservations[roomNumber.toString()]?.find(r => r.time === time)?.name || '예약가능'}
+                    {reservations[roomNumber]?.find(r => r.time === time)?.name || '예약가능'}
                   </td>
                 );
               })}
