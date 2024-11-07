@@ -1,35 +1,61 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
-import { User } from './UserEntity';
-import { Room } from './RoomEntity';
+export class ReservationEntity {
+    private readonly reservationId: number;
+    private readonly userId: number;
+    private readonly roomId: number;
+    private readonly startTime: Date;
+    private readonly endTime: Date;
+    private status: number;
+    private readonly regdate: Date;
 
-@Entity('reservation')
-export class Reservation {
-  @PrimaryGeneratedColumn()
-  reservationId!: number;
+    constructor(
+        reservationId: number,
+        userId: number,
+        roomId: number,
+        startTime: Date,
+        endTime: Date,
+        status: number,
+        regdate: Date
+    ) {
+        this.reservationId = reservationId;
+        this.userId = userId;
+        this.roomId = roomId;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.status = status;
+        this.regdate = regdate;
+    }
 
-  @Column()
-  userId!: number;
+    // Getters
+    public getReservationId(): number {
+        return this.reservationId;
+    }
 
-  @Column()
-  roomId!: number;
+    public getUserId(): number {
+        return this.userId;
+    }
 
-  @Column({ type: 'datetime' })
-  startTime!: Date;
+    public getRoomId(): number {
+        return this.roomId;
+    }
 
-  @Column({ type: 'datetime' })
-  endTime!: Date;
+    public getStartTime(): Date {
+        return this.startTime;
+    }
 
-  @Column()
-  status!: number;
+    public getEndTime(): Date {
+        return this.endTime;
+    }
 
-  @Column({ type: 'datetime' })
-  regdate!: Date;
+    public getStatus(): number {
+        return this.status;
+    }
 
-  @ManyToOne(() => User)
-  @JoinColumn({ name: 'userId' })
-  user!: User;
+    public getRegdate(): Date {
+        return this.regdate;
+    }
 
-  @ManyToOne(() => Room)
-  @JoinColumn({ name: 'roomId' })
-  room!: Room;
+    // Status만 변경 가능하도록 setter 제공
+    public setStatus(status: number): void {
+        this.status = status;
+    }
 }
