@@ -1,0 +1,48 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  userId       Int           @id @default(autoincrement())
+  name         String        @unique
+  reservations Reservation[] @relation("UserReservations")
+}
+
+model Room {
+  id           Int           @id @default(autoincrement())
+  roomId       Int          @unique
+  roomName     String
+  capacity     Int
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  reservations Reservation[]
+}
+
+model Reservation {
+  id         Int      @id @default(autoincrement())
+  roomId     Int
+  userId     Int
+  startTime  DateTime
+  endTime    DateTime
+  userName   String
+  content    String?
+  status     Int      @default(1)  // 1: 활성, 0: 취소
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  room       Room     @relation(fields: [roomId], references: [roomId])
+  user       User     @relation("UserReservations", fields: [userId], references: [userId])
+
+  @@index([roomId])
+  @@index([userId])
+} 
