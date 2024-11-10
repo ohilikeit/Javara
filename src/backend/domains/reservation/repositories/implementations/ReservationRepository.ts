@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client';
+import dayjs from 'dayjs';
 import { ReservationEntity } from '../../entity/ReservationEntity';
 import { ReservationInterfaceRepository } from '../interfaces/ReservationInterfaceRepository';
+import { IReservation } from '../../interfaces/IReservation';
 
 export class ReservationRepository implements ReservationInterfaceRepository {
     private prisma: PrismaClient;
@@ -36,6 +38,45 @@ export class ReservationRepository implements ReservationInterfaceRepository {
                 throw new Error(`Failed to create reservation: ${error.message}`);
             }
             throw new Error('Failed to create reservation: Unknown error');
+        }
+    }
+
+    async findReservationsByDateTime(
+        targetDate: Date,
+        startHour: string,
+        endHour: string
+    ): Promise<ReservationEntity[]> {
+        try {
+            // 날짜와 시간 조합
+            const startDateTime = dayjs(targetDate).format('YYYY-MM-DD') + ' ' + startHour;
+            const endDateTime = dayjs(targetDate).format('YYYY-MM-DD') + ' ' + endHour;
+            
+            const reservations = await this.prisma.reservation.findMany({
+                where: {
+                    startTime: {
+                        gte: new Date(startDateTime)
+                    },
+                    endTime: {
+                        lte: new Date(endDateTime)
+                    }
+                }
+            });
+
+            // ReservationEntity 배열로 변환하여 반환
+            return reservations.map((reservation: IReservation)  => new ReservationEntity(
+                reservation.id,
+                reservation.userId,
+                reservation.roomId,
+                reservation.startTime,
+                reservation.endTime,
+                reservation.status,
+                reservation.regdate
+            ));
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                throw new Error(`Failed to find reservations: ${error.message}`);
+            }
+            throw new Error('Failed to find reservations: Unknown error');
         }
     }
 }
