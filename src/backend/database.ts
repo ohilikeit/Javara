@@ -20,31 +20,36 @@ class DatabaseConnection {
         }
     }
 
-    public static getInstance(): Database {
+    public static async getInstance(): Promise<Database> {
         if (!DatabaseConnection.instance) {
-            // 데이터 디렉토리 확인 및 생성
             DatabaseConnection.ensureDataDirectory();
-
-            DatabaseConnection.instance = new sqlite3.Database(
-                DatabaseConnection.DB_PATH,
-                (err) => {
-                    if (err) {
-                        console.error('데이터베이스 연결 오류:', err.message);
-                    } else {
+            
+            // Promise로 감싸서 비동기 처리
+            await new Promise<void>((resolve, reject) => {
+                DatabaseConnection.instance = new sqlite3.Database(
+                    DatabaseConnection.DB_PATH,
+                    (err) => {
+                        if (err) {
+                            console.error('데이터베이스 연결 오류:', err.message);
+                            reject(err);
+                            return;
+                        }
                         console.log('SQLite 데이터베이스에 연결되었습니다');
+                        
                         // 외래키 제약조건 활성화
                         DatabaseConnection.instance.run('PRAGMA foreign_keys = ON', (err) => {
                             if (err) {
                                 console.error('외래키 제약조건 활성화 오류:', err.message);
-                            } else {
-                                console.log('외래키 제약조건이 활성화되었습니다');
-                                // 테이블 초기화
-                                DatabaseConnection.initializeTables();
+                                reject(err);
+                                return;
                             }
+                            console.log('외래키 제약조건이 활성화되었습니다');
+                            DatabaseConnection.initializeTables();
+                            resolve();
                         });
                     }
-                }
-            );
+                );
+            });
         }
         return DatabaseConnection.instance;
     }
