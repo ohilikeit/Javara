@@ -60,11 +60,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     { startTime: { lt: endDateTime } },
                     { endTime: { gte: endDateTime } }
                   ]
+                },
+                {
+                  AND: [
+                    { startTime: { gte: startDateTime } },
+                    { endTime: { lte: endDateTime } }
+                  ]
                 }
               ]
             }
           ]
         }
+      });
+
+      logger.log('예약 중복 체크:', {
+        newReservation: {
+          startTime: startDateTime.toISOString(),
+          endTime: endDateTime.toISOString(),
+          roomId
+        },
+        existingReservation: existingReservation ? {
+          startTime: existingReservation.startTime.toISOString(),
+          endTime: existingReservation.endTime.toISOString(),
+          roomId: existingReservation.roomId
+        } : null
       });
 
       if (existingReservation) {
@@ -85,7 +104,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     });
 
-    logger.log('예약 생성 성공:', reservation);
+    logger.log('예약 생성 성공:', {
+      id: reservation.id,
+      startTime: reservation.startTime,
+      endTime: reservation.endTime,
+      roomId: reservation.roomId,
+      userName: reservation.userName,
+      content: reservation.content
+    });
 
     return res.status(200).json({
       success: true,
