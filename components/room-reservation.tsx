@@ -2,22 +2,21 @@
 
 import * as React from "react"
 import { Calendar, Search, MessageCircle, Clock } from "lucide-react"
-import { useState } from "react";
 
-import { Button } from "../components/ui/button"
-import { Calendar as CalendarComponent } from "../components/ui/calendar"
+import { Button } from "@/components/ui/button"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "../components/ui/popover"
+} from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select"
+} from "@/components/ui/select"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,12 +26,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "../components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog"
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from "../components/ui/hover-card"
+} from "@/components/ui/hover-card"
 import {
   Dialog,
   DialogContent,
@@ -40,27 +39,24 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../components/ui/dialog"
+} from "@/components/ui/dialog"
 import { ChatInterface } from "@/components/chat/ChatInterface"
 
-// Sample reservation data with explicit type
-const reservations: Record<string, { time: string; name: string }[]> = {
+// Sample reservation data
+const reservations = {
   1: [{ time: "10:00", name: "김철수" }],
   4: [{ time: "14:00", name: "이영희" }],
   5: [{ time: "15:00", name: "박지성" }],
   6: [{ time: "11:00", name: "손흥민" }],
 }
 
-export default function Component() {
+export function Component() {
   const [date, setDate] = React.useState<Date>()
   const [timeSlot, setTimeSlot] = React.useState<string>()
   const [selectedRoom, setSelectedRoom] = React.useState<number | null>(null)
   const [mousePosition, setMousePosition] = React.useState({ x: 0, y: 0 })
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState<Array<{
-    role: 'user' | 'assistant';
-    content: string;
-  }>>([]);
+  const [isChatOpen, setIsChatOpen] = React.useState(false)
+  const [messages, setMessages] = React.useState<any[]>([])
 
   const today = new Date()
   const days = ['일', '월', '화', '수', '목', '금', '토']
@@ -213,27 +209,6 @@ export default function Component() {
             <div className="absolute bottom-[50%] left-[5%] text-sm text-[#3b547b] text-center">
               앞문
             </div>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="absolute bottom-[20%] left-[5%] bg-[#3b547b] text-white hover:bg-[#3b547b]/90"
-                  aria-label="모든 토론방 예약 현황"
-                >
-                  <Clock className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl">
-                <DialogHeader>
-                  <DialogTitle className="text-center">모든 토론방 예약 현황</DialogTitle>
-                  <DialogDescription className="text-center">
-                    {today.getFullYear()}년 {today.getMonth() + 1}월 {today.getDate()}일 ({days[today.getDay()]})
-                  </DialogDescription>
-                </DialogHeader>
-                <AllRoomsTimetable />
-              </DialogContent>
-            </Dialog>
             <Dialog open={isChatOpen} onOpenChange={setIsChatOpen}>
               <DialogTrigger asChild>
                 <Button
@@ -241,15 +216,22 @@ export default function Component() {
                   size="icon"
                   className="absolute bottom-[10%] left-[5%] bg-[#3b547b] text-white hover:bg-[#3b547b]/90"
                   aria-label="채팅"
+                  onClick={() => {
+                    console.log('채팅 버튼 클릭됨');
+                    setIsChatOpen(true);
+                  }}
                 >
                   <MessageCircle className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[1000px]">
-                <ChatInterface 
-                  messages={chatMessages}
-                  onMessagesChange={setChatMessages}
-                />
+                <DialogHeader>
+                  <DialogTitle>대화형 예약 시스템</DialogTitle>
+                </DialogHeader>
+                {isChatOpen && <ChatInterface 
+                  messages={messages}
+                  onMessagesChange={setMessages}
+                />}
               </DialogContent>
             </Dialog>
           </div>
@@ -284,7 +266,7 @@ function TimeTable({ roomNumber }: { roomNumber: number }) {
   const timeSlots = Array.from({ length: 9 }, (_, i) => `${i + 9}:00`)
 
   const isReserved = (time: string) => {
-    return reservations[roomNumber]?.some(r => r.time === time)
+    return reservations[roomNumber as keyof typeof reservations]?.some(r => r.time === time)
   }
 
   return (
@@ -302,7 +284,7 @@ function TimeTable({ roomNumber }: { roomNumber: number }) {
           >
             <span className="w-1/2 text-center">{time}</span>
             <span className="w-1/2 text-center">
-              {isReserved(time) ? reservations[roomNumber]?.find(r => r.time === time)?.name : '예약가능'}
+              {isReserved(time) ? reservations[roomNumber as keyof typeof reservations].find(r => r.time === time)?.name : '예약가능'}
             </span>
           </div>
         ))}
@@ -331,13 +313,13 @@ function AllRoomsTimetable() {
             <tr key={time} className="hover:bg-gray-50">
               <td className="border-b border-gray-200 p-2 text-center">{time}</td>
               {roomNumbers.map(roomNumber => {
-                const isReserved = reservations[roomNumber.toString()]?.some(r => r.time === time);
+                const isReserved = reservations[roomNumber as keyof typeof reservations]?.some(r => r.time === time);
                 return (
                   <td 
                     key={`${roomNumber}-${time}`} 
                     className={`border-b border-gray-200 p-2 text-center ${isReserved ? 'bg-[#bcc6d7] text-[#3b547b]' : 'text-[#3b547b]'}`}
                   >
-                    {reservations[roomNumber.toString()]?.find(r => r.time === time)?.name || '예약가능'}
+                    {reservations[roomNumber as keyof typeof reservations]?.find(r => r.time === time)?.name || '예약가능'}
                   </td>
                 );
               })}
