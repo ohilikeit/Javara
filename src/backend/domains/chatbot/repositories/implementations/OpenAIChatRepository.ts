@@ -96,7 +96,7 @@ export class OpenAIChatRepository implements IChatRepository {
   private async initializeAgent() {
     try {
       logger.log('Agent 초기화 시작');
-      const tools = new ReservationTools().getTools();
+      const tools = new ReservationTools(this.model).getTools();
       logger.log('Tools 생성 완료:', tools.map(t => t.name));
       
       const prompt = ChatPromptTemplate.fromMessages([

@@ -19,9 +19,9 @@ export class SQLiteReservationTool implements IReservationTool {
     logger.log('SQLiteReservationTool initialized');
   }
 
-  async checkAvailability(date: Date, startTime?: string, roomId?: number) {
+  async checkAvailability(date: Date, startTime?: string, roomId?: number, duration: number = 1) {
     try {
-      logger.log('checkAvailability 호출:', { date, startTime, roomId });
+      logger.log('checkAvailability 호출:', { date, startTime, roomId, duration });
 
       const response = await fetch('/api/reservation/check', {
         method: 'POST',
@@ -32,6 +32,7 @@ export class SQLiteReservationTool implements IReservationTool {
           date: date.toISOString(),
           startTime,
           roomId,
+          duration,
         }),
       });
 

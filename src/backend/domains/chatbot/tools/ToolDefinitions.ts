@@ -4,6 +4,7 @@ import { IReservationTool } from "./interfaces/IReservationTool";
 import { SQLiteReservationTool } from "./implementations/SQLiteReservationTool";
 import { logger } from "@/utils/logger";
 import { ReservationValidator } from "./validators/ReservationValidator";
+import { ChatOpenAI } from "@langchain/openai";
 
 interface ReservationInfo {
   date?: string;
@@ -18,9 +19,11 @@ interface ReservationInfo {
 export class ReservationTools {
   private reservationTool: IReservationTool;
   private activeReservations: Map<string, boolean> = new Map();
+  private model: ChatOpenAI;
 
-  constructor() {
+  constructor(model: ChatOpenAI) {
     this.reservationTool = new SQLiteReservationTool();
+    this.model = model;
   }
 
   getTools() {
@@ -37,28 +40,64 @@ export class ReservationTools {
         }),
         func: async ({ date, timeRange = "all", preferredRoom }) => {
           try {
+            // 날짜가 지정되지 않은 경우 먼저 날짜를 물어보도록 함
+            if (!date) {
+              return JSON.stringify({
+                success: true,
+                needDate: true,
+                message: "예약하실 날짜를 먼저 말씀해 주시겠어요? (예: 이번주 금요일, 다음주 월요일 등)"
+              });
+            }
+
             let targetDate: Date;
             
             // 날짜 문자열 처리
             if (typeof date === 'string') {
-              if (date.includes("이번주") || date.includes("다음주")) {
-                const weekType = date.includes("이번주") ? "this" : "next";
-                const dayMatch = date.match(/(월|화|수|목|금)요일/);
-                if (dayMatch) {
-                  const dayMap: { [key: string]: number } = {
-                    '월': 1, '화': 2, '수': 3, '목': 4, '금': 5
-                  };
-                  targetDate = weekType === "this" ? 
-                    this.getThisWeekday(dayMap[dayMatch[1]]) : 
-                    this.getNextWeekday(dayMap[dayMatch[1]]);
-                } else {
-                  targetDate = new Date();
+              try {
+                // parse_date 도구 직접 호출
+                const parseResult = await this.getTools()
+                  .find(t => t.name === "parse_date")
+                  ?.invoke({ dateString: date } as any);
+
+                if (!parseResult) {
+                  return JSON.stringify({
+                    success: false,
+                    error: "날짜 파싱에 실패했습니다.",
+                    needDate: true,
+                    message: "예약하실 날짜를 다시 말씀해 주시겠어요? (예: 이번주 금요일, 다음주 월요일 등)"
+                  });
                 }
-              } else {
-                targetDate = new Date(date);
+
+                const parsedDate = JSON.parse(parseResult);
+                if (!parsedDate.success) {
+                  return JSON.stringify({
+                    success: false,
+                    error: parsedDate.error,
+                    needDate: true,
+                    message: `${parsedDate.error} 다른 날짜를 선택해 주세요.`
+                  });
+                }
+
+                targetDate = new Date(parsedDate.date);
+                logger.log('LLM이 파싱한 날짜:', {
+                  input: date,
+                  parsed: parsedDate,
+                  targetDate: targetDate.toISOString()
+                });
+              } catch (error) {
+                logger.error('날짜 파싱 에러:', error);
+                return JSON.stringify({
+                  success: false,
+                  error: "날짜 파싱 중 오류가 발생했습니다.",
+                  needDate: true
+                });
               }
             } else {
-              targetDate = new Date();
+              return JSON.stringify({
+                success: true,
+                needDate: true,
+                message: "예약하실 날짜를 먼저 말씀해 주시겠어요? (예: 이번주 금요일, 다음주 월요일 등)"
+              });
             }
 
             // 날짜가 과거인 경우 다음 영업일로 설정
@@ -67,7 +106,7 @@ export class ReservationTools {
               targetDate = this.getNextBusinessDay(today);
             }
 
-            logger.log('검색 날짜 계산:', {
+            logger.log('검색 날 계산:', {
               input: date,
               calculated: targetDate.toISOString(),
               dayOfWeek: targetDate.getDay(),
@@ -181,65 +220,41 @@ export class ReservationTools {
           const reservationKey = `${date}_${startTime}_${roomId}`;
           
           try {
-            // 중복 예약 방지를 위한 락 확인
-            if (this.activeReservations.get(reservationKey)) {
-              return JSON.stringify({
-                success: false,
-                error: "동일한 예약이 처리 중입니다.",
-                errorType: 'DUPLICATE_REQUEST'
-              });
-            }
-            
-            this.activeReservations.set(reservationKey, true);
-
-            // 토론방 번호가 없는 경우 가용한 방 찾기
-            if (!roomId) {
-              const availability = await this.reservationTool.checkAvailability(
-                new Date(date),
-                startTime
-              );
-
-              if (!availability.available) {
-                return JSON.stringify({
-                  success: false,
-                  error: "선택한 시간에 예약 가능한 토론방이 없습니다.",
-                  errorType: 'NO_AVAILABLE_ROOM'
-                });
-              }
-
-              // 가용한 방 중 가장 작은 번호의 방 선택
-              const availableRooms = availability.availableSlots
-                .map(slot => slot.roomId)
-                .filter((value, index, self) => self.indexOf(value) === index)
-                .sort((a, b) => a - b);
-
-              if (availableRooms.length === 0) {
-                return JSON.stringify({
-                  success: false,
-                  error: "예약 가능한 토론방이 없습니다.",
-                  errorType: 'NO_AVAILABLE_ROOM'
-                });
-              }
-
-              roomId = availableRooms[0];
-            }
-
-            // 선택된 방에 대해 최종 가용성 체크
-            const finalAvailability = await this.reservationTool.checkAvailability(
+            // 1. 먼저 최종 가용성 체크
+            const availability = await this.reservationTool.checkAvailability(
               new Date(date),
               startTime,
               roomId
             );
 
-            if (!finalAvailability.available) {
+            if (!availability.available) {
               return JSON.stringify({
                 success: false,
-                error: `${roomId}번 토론방은 해당 시간에 이미 예약되어 있습니다.`,
-                errorType: 'ROOM_NOT_AVAILABLE'
+                error: "선택하신 시간은 이미 예약되었습니다.",
+                needInfo: false
               });
             }
 
-            // 예약 생성
+            // 2. 필수 정보 체크
+            if (!userName || userName === "unknown") {
+              return JSON.stringify({
+                success: false,
+                error: "예약자 이름이 필요합니다.",
+                needInfo: true,
+                requiredInfo: "userName"
+              });
+            }
+
+            if (!content || content === "회의 목적 미정") {
+              return JSON.stringify({
+                success: false,
+                error: "회의 목적이 필요합니다.",
+                needInfo: true,
+                requiredInfo: "content"
+              });
+            }
+
+            // 3. 예약 생성 시도
             const result = await this.reservationTool.createReservation({
               date: new Date(date),
               startTime,
@@ -249,37 +264,27 @@ export class ReservationTools {
               content
             });
 
-            // 성공 응답에 예약 완료 상태 플래그 추가
             return JSON.stringify({
               success: true,
               message: `예약이 완료되었습니다. (${roomId}번 토론방)`,
-              reservationCompleted: true,  // 예약 완료 상태 표시
+              reservationCompleted: true,
               reservationDetails: {
                 date,
                 startTime,
                 duration,
                 roomId,
-                userName
+                userName,
+                content
               }
             });
 
           } catch (error) {
             logger.error('create_reservation 에러:', error);
-            
-            const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.";
-            const errorType = error instanceof Error && error.message.includes('이미 예약된 시간')
-              ? 'DUPLICATE_RESERVATION'
-              : 'RESERVATION_CREATION_ERROR';
-
             return JSON.stringify({
               success: false,
-              error: errorMessage,
-              errorType
+              error: error instanceof Error ? error.message : "예약 생성 중 오류가 발생했습니다.",
+              needInfo: false
             });
-
-          } finally {
-            // 락 해제
-            this.activeReservations.delete(reservationKey);
           }
         }
       }),
@@ -291,97 +296,95 @@ export class ReservationTools {
         }),
         func: async ({ dateString }) => {
           try {
+            // LLM에게 날짜 파싱을 요청하는 프롬프트
+            const prompt = `현재 날짜는 ${new Date().toLocaleDateString('ko-KR')} 입니다.
+            다음 자연어 날짜 표현을 YYYY-MM-DD 형식의 구체적인 날짜로 변환해주세요:
+            "${dateString}"
+            
+            JSON 형식으로만 응답해주세요:
+            {
+              "date": "YYYY-MM-DD",
+              "dayOfWeek": "요일",
+              "isWeekend": boolean,
+              "isPast": boolean,
+              "description": "날짜에 대한 설명"
+            }
+            
+            규칙:
+            1. "이번주"는 현재 날짜가 포함된 주의 해당 요일을 의미합니다.
+            2. "다음주"는 다음 주 월요일부터 시작하는 주의 해당 요일을 의미합니다.
+            3. 주말(토,일)인 경우 isWeekend를 true로 설정합니다.
+            4. 과거 날짜인 경우 isPast를 true로 설정합니다.
+            
+            마크다운이나 다른 형식 없이 순수 JSON으로만 응답해주세요.`;
+
+            const response = await this.model.invoke([
+              { 
+                role: 'system', 
+                content: '당신은 날짜 변환 전문가입니다. JSON 형식으로만 응답하세요.' 
+              },
+              { role: 'user', content: prompt }
+            ]);
+
+            // 응답에서 JSON 부분만 추출
+            const jsonStr = response.content.toString()
+              .replace(/```json\n?|\n?```/g, '')  // 마크다운 코드 블록 제거
+              .trim();  // 앞뒤 공백 제거
+
+            const parsedResponse = JSON.parse(jsonStr);
+            
+            // 유효성 검사
+            const targetDate = new Date(parsedResponse.date);
             const today = new Date();
-            let targetDate = new Date(); // 기본값으로 초기화
+            today.setHours(0, 0, 0, 0);
 
-            // 상대적 날짜 처리
-            if (dateString.includes('다음주')) {
-              // 다음주 특정 요일 처리
-              const dayMap: { [key: string]: number } = {
-                '월요일': 1, '화요일': 2, '수요일': 3, '목요일': 4, '금요일': 5,
-                '월욜': 1, '화욜': 2, '수욜': 3, '목욜': 4, '금욜': 5
-              };
-
-              for (const [day, num] of Object.entries(dayMap)) {
-                if (dateString.includes(day)) {
-                  targetDate = this.getNextWeekday(num);
-                  break;
-                }
-              }
-            } else if (dateString.includes('이번주')) {
-              // 이번주 특정 요일 처리
-              const dayMap: { [key: string]: number } = {
-                '요일': 1, '화요일': 2, '수요일': 3, '목요일': 4, '금요일': 5,
-                '월욜': 1, '화욜': 2, '수욜': 3, '목욜': 4, '금욜': 5
-              };
-
-              for (const [day, num] of Object.entries(dayMap)) {
-                if (dateString.includes(day)) {
-                  targetDate = this.getThisWeekday(num);
-                  break;
-                }
-              }
-            } else if (dateString === '내일') {
-              targetDate = new Date(today);
-              targetDate.setDate(today.getDate() + 1);
-            } else if (dateString === '모레') {
-              targetDate = new Date(today);
-              targetDate.setDate(today.getDate() + 2);
-            } else {
-              // YYYY-MM-DD 형식 처리
-              targetDate = new Date(dateString);
-            }
-
-            // 날짜가 유효하지 않은 경우
-            if (!targetDate || isNaN(targetDate.getTime())) {
-              throw new Error('유효하지 않은 날짜 형식입니다.');
-            }
-
-            // 주말인 경우
-            const dayOfWeek = targetDate.getDay();
-            if (dayOfWeek === 0 || dayOfWeek === 6) {
-              return JSON.stringify({
-                success: false,
-                error: '주말은 예약이 불가능합니다.',
-                date: targetDate.toISOString(),
-                dayOfWeek
-              });
-            }
-
-            // 과거 날짜인 경우
-            if (targetDate < today) {
-              return JSON.stringify({
-                success: false,
-                error: '과거 날짜는 예약할 수 없습니다.',
-                date: targetDate.toISOString(),
-                dayOfWeek
-              });
-            }
-
-            // 2주 이후인 경우
+            // 2주 이후 체크
             const twoWeeksLater = new Date(today);
             twoWeeksLater.setDate(today.getDate() + 14);
+
             if (targetDate > twoWeeksLater) {
               return JSON.stringify({
                 success: false,
                 error: '2주 이후의 날짜는 예약할 수 없습니다.',
-                date: targetDate.toISOString(),
-                dayOfWeek
+                date: parsedResponse.date,
+                description: parsedResponse.description
+              });
+            }
+
+            // 과거 날짜 체크
+            if (parsedResponse.isPast || targetDate < today) {
+              return JSON.stringify({
+                success: false,
+                error: '과거 날짜는 예약할 수 없습니다.',
+                date: parsedResponse.date,
+                description: parsedResponse.description
+              });
+            }
+
+            // 주말 체크
+            if (parsedResponse.isWeekend) {
+              return JSON.stringify({
+                success: false,
+                error: '주말은 예약할 수 없습니다.',
+                date: parsedResponse.date,
+                description: parsedResponse.description
               });
             }
 
             return JSON.stringify({
               success: true,
-              date: targetDate.toISOString(),
-              dayOfWeek,
-              dayName: ['일', '월', '화', '수', '목', '금', '토'][dayOfWeek],
-              formattedDate: targetDate.toLocaleDateString()
+              date: parsedResponse.date,
+              dayOfWeek: parsedResponse.dayOfWeek,
+              description: parsedResponse.description,
+              formattedDate: new Date(parsedResponse.date).toLocaleDateString('ko-KR')
             });
+
           } catch (error) {
-            logger.error('parse_date 에러:', error);
+            logger.error('날짜 파싱 에러:', error);
             return JSON.stringify({
               success: false,
-              error: error instanceof Error ? error.message : '날짜 파싱 중 오류가 발생했습니다.'
+              error: '날짜 파싱 중 오류가 발생했습니다.',
+              originalInput: dateString
             });
           }
         }
@@ -554,9 +557,15 @@ export class ReservationTools {
   private getThisWeekday(targetDay: number): Date {
     const today = new Date();
     const currentDay = today.getDay();
-    const distance = targetDay - currentDay;
+    let distance = targetDay - currentDay;
+    
+    // 만약 찾는 요일이 이미 지났다면, 다음 주의 해당 요일로 설정
+    if (distance < 0) {
+        distance += 7;
+    }
+    
     const result = new Date(today);
-    result.setDate(today.getDate() + (distance >= 0 ? distance : distance + 7));
+    result.setDate(today.getDate() + distance);
     return result;
   }
 

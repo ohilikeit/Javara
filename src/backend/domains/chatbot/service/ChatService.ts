@@ -59,7 +59,7 @@ export class ChatService {
   private async initializeAgent() {
     try {
       console.log('Agent 초기화 시작');
-      const tools = new ReservationTools().getTools();
+      const tools = new ReservationTools(this.model).getTools();
       console.log('Tools 생성 완료:', tools.map(t => t.name));
       
       const prompt = ChatPromptTemplate.fromMessages([
@@ -143,8 +143,13 @@ export class ChatService {
       if (Object.keys(newInfo).length > 0) {
         const mergedInfo = {
           ...currentInfo,
-          ...newInfo
+          ...newInfo,
+          date: newInfo.date ? new Date(newInfo.date) : undefined
         };
+        // 'date' property is explicitly converted to 'Date' type if it's a string
+        if (typeof mergedInfo.date === 'string') {
+          mergedInfo.date = new Date(mergedInfo.date);
+        }
         session.updateReservationInfo(mergedInfo);
         console.log('업데이트된 예약 정보:', session.getReservationInfo());
       }
@@ -236,7 +241,7 @@ JSON 형식으로 응답해주세요.`;
         }
       ]);
 
-      const parsed = JSON.parse(result.content);
+      const parsed = JSON.parse(result.content.toString());
       
       // 날짜 처리
       if (parsed.date) {
