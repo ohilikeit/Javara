@@ -3,7 +3,7 @@ import { ChatMessage } from './ChatMessage';
 import { ChatService } from '@/services/ChatService';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '@/utils/logger';
-import { LogViewer } from '../LogViewer';
+import { LogViewer } from '../ui/LogViewer';
 
 interface ChatInterfaceProps {
   messages: Array<{

@@ -4,20 +4,20 @@ import * as React from "react"
 import { Calendar, Search, MessageCircle, Clock } from "lucide-react"
 import { useState } from "react";
 
-import { Button } from "../components/ui/button"
-import { Calendar as CalendarComponent } from "../components/ui/calendar"
+import { Button } from "@/components/ui/button"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "../components/ui/popover"
+} from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select"
+} from "@/components/ui/select"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,12 +27,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "../components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog"
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from "../components/ui/hover-card"
+} from "@/components/ui/hover-card"
 import {
   Dialog,
   DialogContent,
@@ -40,7 +40,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../components/ui/dialog"
+} from "@/components/ui/dialog"
 import { ChatInterface } from "@/components/chat/ChatInterface"
 
 // Sample reservation data with explicit type
@@ -58,8 +58,8 @@ export default function Component() {
   const [mousePosition, setMousePosition] = React.useState({ x: 0, y: 0 })
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<Array<{
-    role: 'user' | 'assistant';
     content: string;
+    isBot: boolean;
   }>>([]);
 
   const today = new Date()
@@ -247,7 +247,10 @@ export default function Component() {
               </DialogTrigger>
               <DialogContent className="sm:max-w-[1000px]">
                 <ChatInterface 
-                  messages={chatMessages}
+                  messages={chatMessages.map(msg => ({
+                    content: msg.content,
+                    isBot: msg.isBot
+                  }))}
                   onMessagesChange={setChatMessages}
                 />
               </DialogContent>
