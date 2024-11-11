@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import type { IReservationRepository } from '../repositories/interfaces/ReservationInterfaceRepository';
+import type { ICancelReservationRepository } from '../repositories/interfaces/ICancelReservationRepository';
 
 @Injectable()
 export class CancelReservationUseCase {
     constructor(
-        private readonly reservationRepository: IReservationRepository
+        private readonly reservationRepository: ICancelReservationRepository
       ) {}
     
       async execute(id: number): Promise<void> {
