@@ -5,11 +5,11 @@ import { logger } from '@/utils/logger';
 const prisma = new PrismaClient();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
+  if (req.method !== 'POST' && req.method !== 'DELETE') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  const { id } = req.body;
+  const id = req.method === 'POST' ? req.body.id : req.query.id;
 
   try {
     if (!id) {
