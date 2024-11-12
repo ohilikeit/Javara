@@ -58,30 +58,20 @@ export class SQLiteReservationTool implements IReservationTool {
     userName: string;
     content: string;
   }): Promise<boolean> {
-    const reservationKey = `${info.date}_${info.startTime}_${info.roomId}`;
-    
     try {
-      // 중복 예약 방지를 위한 락 확인
-      if (this.activeReservations.get(reservationKey)) {
-        throw new Error('동일한 예약이 처리 중입니다.');
-      }
-      
-      this.activeReservations.set(reservationKey, true);
+      logger.log('createReservation 호출됨:', info);
 
-      // 날짜 형식 변환
-      const date = typeof info.date === 'string' ? new Date(info.date) : info.date;
-      const formattedDate = date.toISOString().split('T')[0];
-
+      // API 요청 형식을 create.ts의 형식에 맞게 변환
       const requestBody = {
-        date: formattedDate,
-        startTime: info.startTime,
+        selectedDate: typeof info.date === 'string' ? info.date : info.date.toISOString().split('T')[0],
+        selectedTime: info.startTime,
         duration: info.duration,
         roomId: info.roomId,
         userName: info.userName,
         content: info.content
       };
 
-      logger.log('예약 요청:', requestBody);
+      logger.log('API 요청 데이터:', requestBody);
 
       const result = await fetch('/api/reservation/create', {
         method: 'POST',
@@ -91,20 +81,22 @@ export class SQLiteReservationTool implements IReservationTool {
         body: JSON.stringify(requestBody)
       });
 
+      logger.log('API 응답 상태:', result.status);
+
       if (!result.ok) {
         const errorData = await result.json();
+        logger.error('API 에러 응답:', errorData);
         throw new Error(errorData.error || '예약 생성에 실패했습니다.');
       }
 
       const responseData = await result.json();
+      logger.log('API 성공 응답:', responseData);
+
       return responseData.success;
 
     } catch (error) {
-      logger.error('예약 생성 중 에러:', error);
+      logger.error('예약 생성 중 에러 발생:', error);
       throw error;
-    } finally {
-      // 락 해제
-      this.activeReservations.delete(reservationKey);
     }
   }
 
@@ -224,6 +216,82 @@ export class SQLiteReservationTool implements IReservationTool {
         success: false,
         error: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
       };
+    }
+  }
+
+  async createButtonReservation(info: {
+    date: string | Date;
+    startTime: string;
+    duration: number;
+    roomId: number;
+  }): Promise<boolean> {
+    try {
+      logger.log('createButtonReservation 호출됨:', info);
+
+      const requestBody = {
+        selectedDate: typeof info.date === 'string' ? info.date : info.date.toISOString().split('T')[0],
+        selectedTime: info.startTime,
+        duration: info.duration,
+        roomId: info.roomId
+      };
+
+      logger.log('API 요청 데이터:', requestBody);
+
+      const result = await fetch('/api/reservation/button-create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!result.ok) {
+        const errorData = await result.json();
+        throw new Error(errorData.error || '예약 생성에 실패했습니다.');
+      }
+
+      const responseData = await result.json();
+      return responseData.success;
+
+    } catch (error) {
+      logger.error('예약 버튼 생성 중 에러 발생:', error);
+      throw error;
+    }
+  }
+
+  async searchAvailableRooms(info: {
+    date: string | Date;
+    startTime: string;
+  }): Promise<Array<{ roomId: number; roomName: string; capacity: number }>> {
+    try {
+      logger.log('searchAvailableRooms 호출됨:', info);
+
+      const requestBody = {
+        selectedDate: typeof info.date === 'string' ? info.date : info.date.toISOString().split('T')[0],
+        selectedTime: info.startTime
+      };
+
+      logger.log('API 요청 데이터:', requestBody);
+
+      const result = await fetch('/api/reservation/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!result.ok) {
+        const errorData = await result.json();
+        throw new Error(errorData.error || '방 검색에 실패했습니다.');
+      }
+
+      const responseData = await result.json();
+      return responseData.data;
+
+    } catch (error) {
+      logger.error('방 검색 중 에러 발생:', error);
+      throw error;
     }
   }
 } 

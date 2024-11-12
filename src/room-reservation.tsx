@@ -55,28 +55,94 @@ export default function Component() {
   const [date, setDate] = React.useState<Date>()
   const [timeSlot, setTimeSlot] = React.useState<string>()
   const [selectedRoom, setSelectedRoom] = React.useState<number | null>(null)
+  const [userName, setUserName] = React.useState<string>('')
   const [mousePosition, setMousePosition] = React.useState({ x: 0, y: 0 })
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<Array<{
     role: 'user' | 'assistant';
     content: string;
   }>>([]);
+  const [availableRooms, setAvailableRooms] = React.useState<number[]>([])
 
   const today = new Date()
   const days = ['일', '월', '화', '수', '목', '금', '토']
   const timeSlots = Array.from({ length: 9 }, (_, i) => `${i + 9}:00`)
 
-  const handleSearch = () => {
-    console.log("Searching for:", { date, timeSlot })
+  const handleSearch = async () => {
+    if (!date || !timeSlot) {
+      alert('날짜와 시간을 선택해주세요.')
+      return
+    }
+
+    try {
+      const selectedDate = date.toISOString().split('T')[0]
+      
+      const response = await fetch('/api/reservation/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          selectedDate,
+          selectedTime: timeSlot,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('검색 중 오류가 발생했습니다.')
+      }
+
+      const { success, data, error } = await response.json()
+      
+      if (!success) {
+        throw new Error(error || '검색 중 오류가 발생했습니다.')
+      }
+
+      setAvailableRooms(data.map((room: { roomId: number }) => room.roomId))
+    } catch (error) {
+      console.error('Search error:', error)
+      alert(error instanceof Error ? error.message : '검색 중 오류가 발생했습니다.')
+    }
   }
 
   const handleRoomClick = (roomNumber: number) => {
     setSelectedRoom(roomNumber)
   }
 
-  const handleReservation = () => {
-    console.log(`Room ${selectedRoom} reserved for ${date?.toLocaleDateString()} at ${timeSlot}`)
-    setSelectedRoom(null)
+  const handleReservation = async () => {
+    if (!date || !timeSlot || !selectedRoom || !userName.trim()) {
+      alert('날짜, 시간, 방 번호, 예약자 성함을 모두 입력해주세요.')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/reservation/button-create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          selectedDate: date.toISOString().split('T')[0],
+          selectedTime: timeSlot,
+          duration: 1,
+          roomId: selectedRoom,
+          userName: userName.trim()
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || '예약 생성 중 오류가 발생했습니다.')
+      }
+
+      alert('예약이 완료되었습니다.')
+      setSelectedRoom(null)
+      setUserName('')
+      handleSearch()
+    } catch (error) {
+      console.error('Reservation error:', error)
+      alert(error instanceof Error ? error.message : '예약 생성 중 오류가 발생했습니다.')
+    }
   }
 
   const handleMouseMove = (event: React.MouseEvent) => {
@@ -138,7 +204,7 @@ export default function Component() {
             {/* Rooms */}
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
-                <Room number={1} available onClick={() => handleRoomClick(1)} className="absolute left-[12%] top-[2%] h-[30%] w-[15%]" />
+                <Room number={1} available onClick={() => handleRoomClick(1)} className="absolute left-[12%] top-[2%] h-[30%] w-[15%]" availableRooms={availableRooms} />
               </HoverCardTrigger>
               <HoverCardContent 
                 className="w-80"
@@ -152,12 +218,12 @@ export default function Component() {
               </HoverCardContent>
             </HoverCard>
 
-            <Room number={2} disabled className="absolute left-[25%] top-[2%] h-[30%] w-[15%]" />
-            <Room number={3} disabled className="absolute left-[40%] top-[2%] h-[30%] w-[15%]" />
+            <Room number={2} disabled className="absolute left-[25%] top-[2%] h-[30%] w-[15%]" availableRooms={availableRooms} />
+            <Room number={3} disabled className="absolute left-[40%] top-[2%] h-[30%] w-[15%]" availableRooms={availableRooms} />
 
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
-                <Room number={4} available onClick={() => handleRoomClick(4)} className="absolute left-[55%] top-[2%] h-[30%] w-[15%]" />
+                <Room number={4} available onClick={() => handleRoomClick(4)} className="absolute left-[55%] top-[2%] h-[30%] w-[15%]" availableRooms={availableRooms} />
               </HoverCardTrigger>
               <HoverCardContent 
                 className="w-80"
@@ -173,7 +239,7 @@ export default function Component() {
 
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
-                <Room number={5} available onClick={() => handleRoomClick(5)} className="absolute left-[70%] top-[2%] h-[30%] w-[15%]" />
+                <Room number={5} available onClick={() => handleRoomClick(5)} className="absolute left-[70%] top-[2%] h-[30%] w-[15%]" availableRooms={availableRooms} />
               </HoverCardTrigger>
               <HoverCardContent 
                 className="w-80"
@@ -189,7 +255,7 @@ export default function Component() {
 
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
-                <Room number={6} available onClick={() => handleRoomClick(6)} className="absolute bottom-[2%] right-[2%] h-[50%] w-[20%]" />
+                <Room number={6} available onClick={() => handleRoomClick(6)} className="absolute bottom-[2%] right-[2%] h-[50%] w-[20%]" availableRooms={availableRooms} />
               </HoverCardTrigger>
               <HoverCardContent 
                 className="w-80"
@@ -260,14 +326,30 @@ export default function Component() {
             <AlertDialogHeader>
               <AlertDialogTitle className="text-center">토론방 {selectedRoom} 예약</AlertDialogTitle>
               <AlertDialogDescription className="text-center">
-                {date && timeSlot
-                  ? `${date.toLocaleDateString()}에 ${timeSlot} 시간대로 토론방 ${selectedRoom}을 예약하시겠습니까?`
-                  : "날짜와 시간을 선택해주세요."}
+                {date && timeSlot ? (
+                  <>
+                    <p className="mb-4">{`${date.toLocaleDateString()}에 ${timeSlot} 시간대로 토론방 ${selectedRoom}을 예약하시겠습니까?`}</p>
+                    <div className="mt-4">
+                      <input
+                        type="text"
+                        value={userName}
+                        onChange={(e) => setUserName(e.target.value)}
+                        placeholder="예약자 성함을 입력해주세요"
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  "날짜와 시간을 선택해주세요."
+                )}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="flex justify-center">
               <AlertDialogCancel>취소</AlertDialogCancel>
-              <AlertDialogAction onClick={handleReservation} disabled={!date || !timeSlot}>
+              <AlertDialogAction 
+                onClick={handleReservation} 
+                disabled={!date || !timeSlot || !userName.trim()}
+              >
                 예약
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -351,27 +433,25 @@ function AllRoomsTimetable() {
 
 function Room({
   number,
-  disabled = false,
-  available = false,
   onClick,
   className = "",
+  availableRooms,
 }: {
   number: number
-  disabled?: boolean
-  available?: boolean
   onClick?: () => void
   className?: string
+  availableRooms: number[]
 }) {
+  const isAvailable = availableRooms.includes(number)
+  
   return (
     <div
-      onClick={available ? onClick : undefined}
+      onClick={isAvailable ? onClick : undefined}
       className={`border-2 text-center text-sm flex items-center justify-center ${className}
         ${
-          disabled
-            ? "border-gray-300 bg-gray-100 text-gray-500"
-            : available
+          isAvailable
             ? "border-[#3b547b] bg-[#3b547b] text-white cursor-pointer hover:bg-[#3b547b]/90"
-            : "border-[#3b547b]/20 bg-white text-[#3b547b]"
+            : "border-gray-300 bg-gray-100 text-gray-500"
         }
       `}
     >

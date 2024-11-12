@@ -54,25 +54,95 @@ export function Component() {
   const [date, setDate] = React.useState<Date>()
   const [timeSlot, setTimeSlot] = React.useState<string>()
   const [selectedRoom, setSelectedRoom] = React.useState<number | null>(null)
+  const [userName, setUserName] = React.useState<string>('')
   const [mousePosition, setMousePosition] = React.useState({ x: 0, y: 0 })
   const [isChatOpen, setIsChatOpen] = React.useState(false)
   const [messages, setMessages] = React.useState<any[]>([])
+  const [availableRooms, setAvailableRooms] = React.useState<number[]>([])
 
   const today = new Date()
   const days = ['일', '월', '화', '수', '목', '금', '토']
   const timeSlots = Array.from({ length: 9 }, (_, i) => `${i + 9}:00`)
 
-  const handleSearch = () => {
-    console.log("Searching for:", { date, timeSlot })
+  const handleSearch = async () => {
+    if (!date || !timeSlot) {
+      alert('날짜와 시간을 선택해주세요.')
+      return
+    }
+
+    try {
+      const selectedDate = date.toISOString().split('T')[0]
+      
+      const response = await fetch('/api/reservation/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          selectedDate,
+          selectedTime: timeSlot,
+        }),
+      })
+
+      console.log('Search Response:', await response.clone().json())
+
+      if (!response.ok) {
+        throw new Error('검색 중 오류가 발생했습니다.')
+      }
+
+      const { success, data, error } = await response.json()
+      console.log('Parsed Response:', { success, data, error })
+      
+      if (!success) {
+        throw new Error(error || '검색 중 오류가 발생했습니다.')
+      }
+
+      setAvailableRooms(data.map((room: { roomId: number }) => room.roomId))
+      console.log('Available Rooms:', availableRooms)
+    } catch (error) {
+      console.error('Search error:', error)
+      alert(error instanceof Error ? error.message : '검색 중 오류가 발생했습니다.')
+    }
   }
 
   const handleRoomClick = (roomNumber: number) => {
     setSelectedRoom(roomNumber)
   }
 
-  const handleReservation = () => {
-    console.log(`Room ${selectedRoom} reserved for ${date?.toLocaleDateString()} at ${timeSlot}`)
-    setSelectedRoom(null)
+  const handleReservation = async () => {
+    if (!date || !timeSlot || !selectedRoom || !userName.trim()) {
+      alert('날짜, 시간, 방 번호, 예약자 성함을 모두 입력해주세요.')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/reservation/button-create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          selectedDate: date.toISOString().split('T')[0],
+          selectedTime: timeSlot,
+          duration: 1,
+          roomId: selectedRoom,
+          userName: userName.trim()
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || '예약 생성 중 오류가 발생했습니다.')
+      }
+
+      alert('예약이 완료되었습니다.')
+      setSelectedRoom(null)
+      setUserName('')
+      handleSearch()
+    } catch (error) {
+      console.error('Reservation error:', error)
+      alert(error instanceof Error ? error.message : '예약 생성 중 오류가 발생했습니다.')
+    }
   }
 
   const handleMouseMove = (event: React.MouseEvent) => {
@@ -242,14 +312,30 @@ export function Component() {
             <AlertDialogHeader>
               <AlertDialogTitle className="text-center">토론방 {selectedRoom} 예약</AlertDialogTitle>
               <AlertDialogDescription className="text-center">
-                {date && timeSlot
-                  ? `${date.toLocaleDateString()}에 ${timeSlot} 시간대로 토론방 ${selectedRoom}을 예약하시겠습니까?`
-                  : "날짜와 시간을 선택해주세요."}
+                {date && timeSlot ? (
+                  <>
+                    <p className="mb-4">{`${date.toLocaleDateString()}에 ${timeSlot} 시간대로 토론방 ${selectedRoom}을 예약하시겠습니까?`}</p>
+                    <div className="mt-4">
+                      <input
+                        type="text"
+                        value={userName}
+                        onChange={(e) => setUserName(e.target.value)}
+                        placeholder="예약자 성함을 입력해주세요"
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  "날짜와 시간을 선택해주세요."
+                )}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="flex justify-center">
               <AlertDialogCancel>취소</AlertDialogCancel>
-              <AlertDialogAction onClick={handleReservation} disabled={!date || !timeSlot}>
+              <AlertDialogAction 
+                onClick={handleReservation} 
+                disabled={!date || !timeSlot || !userName.trim()}
+              >
                 예약
               </AlertDialogAction>
             </AlertDialogFooter>
