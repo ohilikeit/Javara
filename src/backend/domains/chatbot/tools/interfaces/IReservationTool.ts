@@ -29,4 +29,16 @@ export interface IReservationTool {
       endTime: string;
     }>;
   }>;
+
+  createButtonReservation(data: {
+    date: string | Date;
+    startTime: string;
+    duration: number;
+    roomId: number;
+  }): Promise<boolean>;
+
+  searchAvailableRooms(data: {
+    date: string | Date;
+    startTime: string;
+  }): Promise<Array<{ roomId: number; roomName: string; capacity: number }>>;
 } 

@@ -58,53 +58,45 @@ export class SQLiteReservationTool implements IReservationTool {
     userName: string;
     content: string;
   }): Promise<boolean> {
-    const reservationKey = `${info.date}_${info.startTime}_${info.roomId}`;
-    
     try {
-      // 중복 예약 방지를 위한 락 확인
-      if (this.activeReservations.get(reservationKey)) {
-        throw new Error('동일한 예약이 처리 중입니다.');
-      }
-      
-      this.activeReservations.set(reservationKey, true);
+      logger.log('createReservation 호출됨:', info);
 
-      // 날짜 형식 변환
-      const date = typeof info.date === 'string' ? new Date(info.date) : info.date;
-      const formattedDate = date.toISOString().split('T')[0];
+      // 날짜 처리
+      const startDateTime = new Date(info.date);
+      const [hours, minutes] = info.startTime.split(':').map(Number);
+      startDateTime.setHours(hours, minutes || 0, 0, 0);
 
-      const requestBody = {
-        date: formattedDate,
-        startTime: info.startTime,
-        duration: info.duration,
-        roomId: info.roomId,
-        userName: info.userName,
-        content: info.content
-      };
+      // 종료 시간 계산
+      const endDateTime = new Date(startDateTime);
+      endDateTime.setHours(startDateTime.getHours() + info.duration);
 
-      logger.log('예약 요청:', requestBody);
-
-      const result = await fetch('/api/reservation/create', {
+      const response = await fetch('/api/reservation/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          startTime: startDateTime.toISOString(),
+          endTime: endDateTime.toISOString(),
+          roomId: info.roomId,
+          userId: 1,  // 하드코딩
+          userName: info.userName,
+          content: info.content,
+          status: 1
+        })
       });
 
-      if (!result.ok) {
-        const errorData = await result.json();
+      if (!response.ok) {
+        const errorData = await response.json();
         throw new Error(errorData.error || '예약 생성에 실패했습니다.');
       }
 
-      const responseData = await result.json();
-      return responseData.success;
+      const data = await response.json();
+      return data.success;
 
     } catch (error) {
-      logger.error('예약 생성 중 에러:', error);
+      logger.error('예약 생성 중 에러 발생:', error);
       throw error;
-    } finally {
-      // 락 해제
-      this.activeReservations.delete(reservationKey);
     }
   }
 
@@ -224,6 +216,82 @@ export class SQLiteReservationTool implements IReservationTool {
         success: false,
         error: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
       };
+    }
+  }
+
+  async createButtonReservation(info: {
+    date: string | Date;
+    startTime: string;
+    duration: number;
+    roomId: number;
+  }): Promise<boolean> {
+    try {
+      logger.log('createButtonReservation 호출됨:', info);
+
+      const requestBody = {
+        selectedDate: typeof info.date === 'string' ? info.date : info.date.toISOString().split('T')[0],
+        selectedTime: info.startTime,
+        duration: info.duration,
+        roomId: info.roomId
+      };
+
+      logger.log('API 요청 데이터:', requestBody);
+
+      const result = await fetch('/api/reservation/button-create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!result.ok) {
+        const errorData = await result.json();
+        throw new Error(errorData.error || '예약 생성에 실패했습니다.');
+      }
+
+      const responseData = await result.json();
+      return responseData.success;
+
+    } catch (error) {
+      logger.error('예약 버튼 생성 중 에러 발생:', error);
+      throw error;
+    }
+  }
+
+  async searchAvailableRooms(info: {
+    date: string | Date;
+    startTime: string;
+  }): Promise<Array<{ roomId: number; roomName: string; capacity: number }>> {
+    try {
+      logger.log('searchAvailableRooms 호출됨:', info);
+
+      const requestBody = {
+        selectedDate: typeof info.date === 'string' ? info.date : info.date.toISOString().split('T')[0],
+        selectedTime: info.startTime
+      };
+
+      logger.log('API 요청 데이터:', requestBody);
+
+      const result = await fetch('/api/reservation/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!result.ok) {
+        const errorData = await result.json();
+        throw new Error(errorData.error || '방 검색에 실패했습니다.');
+      }
+
+      const responseData = await result.json();
+      return responseData.data;
+
+    } catch (error) {
+      logger.error('방 검색 중 에러 발생:', error);
+      throw error;
     }
   }
 } 
