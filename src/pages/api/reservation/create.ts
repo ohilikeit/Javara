@@ -1,7 +1,18 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
+import { logger } from '@/utils/logger';
 
 const prisma = new PrismaClient();
+
+interface CreateReservationRequest {
+  startTime: string;
+  endTime: string;
+  roomId: number;
+  userId: number;
+  userName: string;
+  content: string;
+  status: number;
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -9,34 +20,64 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { date, timeSlot, roomNumber } = req.body;
+    const { startTime, endTime, roomId, userId, userName, content, status } = req.body as CreateReservationRequest;
 
     // 중복 예약 확인
     const existingReservation = await prisma.reservation.findFirst({
       where: {
-        date: new Date(date),
-        timeSlot: timeSlot,
-        roomNumber: roomNumber,
-      },
+        AND: [
+          { roomId: Number(roomId) },
+          { status: 1 },
+          {
+            OR: [
+              {
+                AND: [
+                  { startTime: { lte: new Date(startTime) } },
+                  { endTime: { gt: new Date(startTime) } }
+                ]
+              },
+              {
+                AND: [
+                  { startTime: { lt: new Date(endTime) } },
+                  { endTime: { gte: new Date(endTime) } }
+                ]
+              }
+            ]
+          }
+        ]
+      }
     });
 
     if (existingReservation) {
-      return res.status(400).json({ message: '이미 예약된 시간입니다.' });
+      return res.status(409).json({
+        success: false,
+        error: '이미 예약된 시간입니다.'
+      });
     }
 
-    // 새 예약 생성
+    // 예약 생성
     const reservation = await prisma.reservation.create({
       data: {
-        date: new Date(date),
-        timeSlot: timeSlot,
-        roomNumber: roomNumber,
-        userId: 'test-user', // 실제 구현시 인증된 사용자 ID 사용
-      },
+        startTime: new Date(startTime),
+        endTime: new Date(endTime),
+        roomId: Number(roomId),
+        userId: Number(userId),
+        userName,
+        content,
+        status
+      }
     });
 
-    return res.status(201).json(reservation);
+    return res.status(200).json({
+      success: true,
+      data: reservation
+    });
+
   } catch (error) {
-    console.error('Reservation creation error:', error);
-    return res.status(500).json({ message: '서버 오류가 발생했습니다.' });
+    logger.error('예약 생성 중 에러:', error);
+    return res.status(500).json({
+      success: false,
+      error: '예약 생성 중 오류가 발생했습니다.'
+    });
   }
 } 

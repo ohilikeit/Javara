@@ -204,7 +204,12 @@ export default function Component() {
             {/* Rooms */}
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
-                <Room number={1} available onClick={() => handleRoomClick(1)} className="absolute left-[12%] top-[2%] h-[30%] w-[15%]" availableRooms={availableRooms} />
+                <Room 
+                  number={1}
+                  onClick={() => handleRoomClick(1)}
+                  className="absolute left-[12%] top-[2%] h-[30%] w-[15%]"
+                  availableRooms={availableRooms}
+                />
               </HoverCardTrigger>
               <HoverCardContent 
                 className="w-80"
@@ -218,12 +223,25 @@ export default function Component() {
               </HoverCardContent>
             </HoverCard>
 
-            <Room number={2} disabled className="absolute left-[25%] top-[2%] h-[30%] w-[15%]" availableRooms={availableRooms} />
-            <Room number={3} disabled className="absolute left-[40%] top-[2%] h-[30%] w-[15%]" availableRooms={availableRooms} />
+            <Room 
+              number={2}
+              className="absolute left-[25%] top-[2%] h-[30%] w-[15%]"
+              availableRooms={availableRooms}
+            />
+            <Room 
+              number={3}
+              className="absolute left-[40%] top-[2%] h-[30%] w-[15%]"
+              availableRooms={availableRooms}
+            />
 
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
-                <Room number={4} available onClick={() => handleRoomClick(4)} className="absolute left-[55%] top-[2%] h-[30%] w-[15%]" availableRooms={availableRooms} />
+                <Room 
+                  number={4}
+                  onClick={() => handleRoomClick(4)}
+                  className="absolute left-[55%] top-[2%] h-[30%] w-[15%]"
+                  availableRooms={availableRooms}
+                />
               </HoverCardTrigger>
               <HoverCardContent 
                 className="w-80"
@@ -239,7 +257,12 @@ export default function Component() {
 
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
-                <Room number={5} available onClick={() => handleRoomClick(5)} className="absolute left-[70%] top-[2%] h-[30%] w-[15%]" availableRooms={availableRooms} />
+                <Room 
+                  number={5}
+                  onClick={() => handleRoomClick(5)}
+                  className="absolute left-[70%] top-[2%] h-[30%] w-[15%]"
+                  availableRooms={availableRooms}
+                />
               </HoverCardTrigger>
               <HoverCardContent 
                 className="w-80"
@@ -255,7 +278,12 @@ export default function Component() {
 
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
-                <Room number={6} available onClick={() => handleRoomClick(6)} className="absolute bottom-[2%] right-[2%] h-[50%] w-[20%]" availableRooms={availableRooms} />
+                <Room 
+                  number={6}
+                  onClick={() => handleRoomClick(6)}
+                  className="absolute bottom-[2%] right-[2%] h-[50%] w-[20%]"
+                  availableRooms={availableRooms}
+                />
               </HoverCardTrigger>
               <HoverCardContent 
                 className="w-80"
@@ -313,8 +341,16 @@ export default function Component() {
               </DialogTrigger>
               <DialogContent className="sm:max-w-[1000px]">
                 <ChatInterface 
-                  messages={chatMessages}
-                  onMessagesChange={setChatMessages}
+                  messages={chatMessages.map(msg => ({
+                    content: msg.content,
+                    isBot: msg.role === 'assistant'
+                  }))}
+                  onMessagesChange={(newMessages) => {
+                    setChatMessages(newMessages.map(msg => ({
+                      content: msg.content,
+                      role: msg.isBot ? 'assistant' : 'user'
+                    })))
+                  }}
                 />
               </DialogContent>
             </Dialog>
@@ -437,12 +473,12 @@ function Room({
   className = "",
   availableRooms,
 }: {
-  number: number
-  onClick?: () => void
-  className?: string
-  availableRooms: number[]
+  number: number;
+  onClick?: () => void;
+  className?: string;
+  availableRooms: number[];
 }) {
-  const isAvailable = availableRooms.includes(number)
+  const isAvailable = availableRooms.includes(number);
   
   return (
     <div

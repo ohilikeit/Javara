@@ -61,38 +61,38 @@ export class SQLiteReservationTool implements IReservationTool {
     try {
       logger.log('createReservation 호출됨:', info);
 
-      // API 요청 형식을 create.ts의 형식에 맞게 변환
-      const requestBody = {
-        selectedDate: typeof info.date === 'string' ? info.date : info.date.toISOString().split('T')[0],
-        selectedTime: info.startTime,
-        duration: info.duration,
-        roomId: info.roomId,
-        userName: info.userName,
-        content: info.content
-      };
+      // 날짜 처리
+      const startDateTime = new Date(info.date);
+      const [hours, minutes] = info.startTime.split(':').map(Number);
+      startDateTime.setHours(hours, minutes || 0, 0, 0);
 
-      logger.log('API 요청 데이터:', requestBody);
+      // 종료 시간 계산
+      const endDateTime = new Date(startDateTime);
+      endDateTime.setHours(startDateTime.getHours() + info.duration);
 
-      const result = await fetch('/api/reservation/create', {
+      const response = await fetch('/api/reservation/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          startTime: startDateTime.toISOString(),
+          endTime: endDateTime.toISOString(),
+          roomId: info.roomId,
+          userId: 1,  // 하드코딩
+          userName: info.userName,
+          content: info.content,
+          status: 1
+        })
       });
 
-      logger.log('API 응답 상태:', result.status);
-
-      if (!result.ok) {
-        const errorData = await result.json();
-        logger.error('API 에러 응답:', errorData);
+      if (!response.ok) {
+        const errorData = await response.json();
         throw new Error(errorData.error || '예약 생성에 실패했습니다.');
       }
 
-      const responseData = await result.json();
-      logger.log('API 성공 응답:', responseData);
-
-      return responseData.success;
+      const data = await response.json();
+      return data.success;
 
     } catch (error) {
       logger.error('예약 생성 중 에러 발생:', error);
