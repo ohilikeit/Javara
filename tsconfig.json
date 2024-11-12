@@ -6,8 +6,8 @@
     "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
+    "module": "preserve",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
@@ -22,9 +22,8 @@
       "@/*": ["./src/*"]
     },
     "target": "es2017",
-    "module": "commonjs",
     "forceConsistentCasingInFileNames": true
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "prisma/**/*"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "src/lib/prisma/**/*"]
 }
