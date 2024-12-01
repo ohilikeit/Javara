@@ -117,8 +117,10 @@ export class SQLiteReservationTool implements IReservationTool {
   }> {
     try {
       const targetDate = typeof options.startFrom === 'string' 
-        ? DateParsingTool.parseDateString(options.startFrom)
+        ? await DateParsingTool.parseDateString(options.startFrom)
         : options.startFrom;
+
+      if (!targetDate) throw new Error("유효하지 않은 날짜입니다.");
 
       logger.log('findNextAvailable 요청:', {
         targetDate,

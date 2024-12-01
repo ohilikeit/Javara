@@ -299,7 +299,7 @@ export default function Component() {
 
             {/* Other Elements */}
             <div className="absolute bottom-[40%] left-[45%] text-sm text-[#3b547b] text-center">
-              더블어숲
+              더불어숲
             </div>
             <div className="absolute right-[2%] top-[2%] text-sm text-[#3b547b] text-center">
               계단
