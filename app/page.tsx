@@ -1,5 +1,5 @@
-import Component from "../src/room-reservation";
+import RoomReservation from "../src/frontend/pages/room-reservation";
 
 export default function Page() {
-  return <Component />;
+  return <RoomReservation />;
 }

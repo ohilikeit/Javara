@@ -1,4 +1,4 @@
-class Logger {
+export class Logger {
   private static MAX_LOG_SIZE = 1000; // 최대 로그 저장 개수
   private logs: Array<{
     timestamp: string;
@@ -6,6 +6,7 @@ class Logger {
     message: string;
     data?: any;
   }> = [];
+  private listeners: Set<() => void> = new Set();
 
   private formatMessage(level: string, message: string, data?: any): string {
     const timestamp = new Date().toISOString();
@@ -85,6 +86,14 @@ class Logger {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  addListener(callback: () => void) {
+    this.listeners.add(callback);
+  }
+
+  removeListener(callback: () => void) {
+    this.listeners.delete(callback);
   }
 }
 
