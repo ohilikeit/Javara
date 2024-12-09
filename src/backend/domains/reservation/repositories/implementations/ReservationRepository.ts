@@ -18,7 +18,7 @@ export class ReservationRepository implements ReservationInterfaceRepository {
                     startTime: reservation.getStartTime(),
                     endTime: reservation.getEndTime(),
                     status: reservation.getStatus(),
-                    regdate: new Date() // 현재 시간으로 설정
+                    regdate: new Date()
                 }
             });
 
@@ -31,11 +31,8 @@ export class ReservationRepository implements ReservationInterfaceRepository {
                 createdReservation.status,
                 createdReservation.regdate
             );
-        } catch (error: unknown) {
-            if (error instanceof Error) {
-                throw new Error(`Failed to create reservation: ${error.message}`);
-            }
-            throw new Error('Failed to create reservation: Unknown error');
+        } catch (error) {
+            throw new Error(`Failed to create reservation: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 }

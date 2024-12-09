@@ -185,52 +185,12 @@ export class OpenAIChatRepository implements IChatRepository {
     return contextParts.join('\n');
   }
 
-  // 대화 히스토리 관리 메서드 추가
+  // 대화 히스토리 ���리 메서드 추가
   public clearHistory(): void {
     this.messageHistory = [this.messageHistory[0]]; // 시스템 프롬프트만 유지
   }
 
   public getHistory(): Array<{ role: 'system' | 'user' | 'assistant', content: string }> {
     return [...this.messageHistory];
-  }
-
-  private getCurrentTimeRange(info: ReservationInfo): string | undefined {
-    if (!info.startTime) return undefined;
-    const hour = parseInt(info.startTime.split(':')[0]);
-    if (hour >= 9 && hour < 12) return 'morning';
-    if (hour >= 13 && hour < 18) return 'afternoon';
-    return undefined;
-  }
-
-  // 날짜 검증 로직 수정
-  private validateReservationDate(date: Date): boolean {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);  // 당일 자정으로 설정
-    
-    const twoWeeksLater = new Date(today);
-    twoWeeksLater.setDate(today.getDate() + 14);
-    twoWeeksLater.setHours(23, 59, 59, 999);  // 2주 후 마지막 시간으로 설정
-
-    const targetDate = new Date(date);
-    targetDate.setHours(0, 0, 0, 0);  // 비교를 위해 시간 초기화
-
-    return targetDate >= today && targetDate <= twoWeeksLater;
-  }
-
-  private getNextWeekday(targetDay: number): Date {
-    const today = new Date();
-    const result = new Date(today);
-    
-    // 다음 주의 시작일(월요일)로 이동
-    while (result.getDay() !== 1) {
-      result.setDate(result.getDate() + 1);
-    }
-    
-    // 원하는 요일까지 이동
-    while (result.getDay() !== targetDay) {
-      result.setDate(result.getDate() + 1);
-    }
-    
-    return result;
   }
 } 
