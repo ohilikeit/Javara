@@ -4,6 +4,11 @@ import { logger } from '@/utils/logger';
 
 const prisma = new PrismaClient();
 
+interface Reservation {
+  roomId: number;
+  startTime: string;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
@@ -47,7 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       all: { start: 9, end: 18 }
     };
 
-    // 기존 예약 조회
+    // 기존 예약 ��회
     const existingReservations = await prisma.reservation.findMany({
       where: {
         startTime: {
@@ -72,7 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const endTime = `${(hour + 1).toString().padStart(2, '0')}:00`;
 
         // 해당 시간대에 예약이 있는지 확인
-        const isBooked = existingReservations.some(reservation => {
+        const isBooked = existingReservations.some((reservation: Reservation) => {
           const resStart = new Date(reservation.startTime).getHours();
           return reservation.roomId === roomId && resStart === hour;
         });
