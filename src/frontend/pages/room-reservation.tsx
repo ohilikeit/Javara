@@ -43,14 +43,6 @@ import {
 } from "../components/ui/dialog"
 import { ChatInterface } from "../components/chat/ChatInterface"
 
-// Sample reservation data with explicit type
-const reservations: Record<string, { time: string; name: string }[]> = {
-  1: [{ time: "10:00", name: "김철수" }],
-  4: [{ time: "14:00", name: "이영희" }],
-  5: [{ time: "15:00", name: "박지성" }],
-  6: [{ time: "11:00", name: "손흥민" }],
-}
-
 export default function Component() {
   const [date, setDate] = React.useState<Date>()
   const [timeSlot, setTimeSlot] = React.useState<string>()
@@ -64,7 +56,6 @@ export default function Component() {
 
   const today = new Date()
   const days = ['일', '월', '화', '수', '목', '금', '토']
-  const timeSlots = Array.from({ length: 9 }, (_, i) => `${i + 9}:00`)
 
   const handleSearch = () => {
     console.log("Searching for:", { date, timeSlot })
@@ -286,10 +277,6 @@ function TimeTable({ roomNumber }: { roomNumber: number }) {
   const days = ['일', '월', '화', '수', '목', '금', '토']
   const timeSlots = Array.from({ length: 9 }, (_, i) => `${i + 9}:00`)
 
-  const isReserved = (time: string) => {
-    return reservations[roomNumber]?.some(r => r.time === time)
-  }
-
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">
       <div className="mb-4 text-lg font-semibold text-[#3b547b] text-center">
@@ -300,12 +287,12 @@ function TimeTable({ roomNumber }: { roomNumber: number }) {
           <div
             key={time}
             className={`flex items-center justify-between rounded-md p-2 text-sm
-              ${isReserved(time) ? 'bg-[#bcc6d7] text-[#3b547b]' : 'bg-[#3b547b] text-white'}
+              ${'bg-[#3b547b] text-white'}
             `}
           >
             <span className="w-1/2 text-center">{time}</span>
             <span className="w-1/2 text-center">
-              {isReserved(time) ? reservations[roomNumber]?.find(r => r.time === time)?.name : '예약가능'}
+              예약가능
             </span>
           </div>
         ))}
@@ -334,13 +321,12 @@ function AllRoomsTimetable() {
             <tr key={time} className="hover:bg-gray-50">
               <td className="border-b border-gray-200 p-2 text-center">{time}</td>
               {roomNumbers.map(roomNumber => {
-                const isReserved = reservations[roomNumber.toString()]?.some(r => r.time === time);
                 return (
                   <td 
                     key={`${roomNumber}-${time}`} 
-                    className={`border-b border-gray-200 p-2 text-center ${isReserved ? 'bg-[#bcc6d7] text-[#3b547b]' : 'text-[#3b547b]'}`}
+                    className={`border-b border-gray-200 p-2 text-center ${'text-[#3b547b]'}`}
                   >
-                    {reservations[roomNumber.toString()]?.find(r => r.time === time)?.name || '예약가능'}
+                    예약가능
                   </td>
                 );
               })}

@@ -198,41 +198,11 @@ export class ChatService {
         parsedInfo.date = date;
       }
 
-      // 나머지 정보 파싱 로직...
+      // 나머지 정보 파싱 ���직...
       
       return parsedInfo;
     } catch (error) {
       logger.log('예약 정보 파싱 실패:', error);
-      throw error;
-    }
-  }
-
-  private async handleGeneralConversation(
-    session: ChatSessionEntity,
-    message: string,
-    onStream: (token: string) => void
-  ): Promise<string> {
-    try {
-      // 현재 예약 정보를 컨텍스트에 포함
-      const reservationInfo = session.getReservationInfo();
-      const contextMessage = this.buildContextMessage(message, reservationInfo);
-
-      const result = await this.agent?.invoke({
-        input: contextMessage
-      });
-
-      if (!result) throw new Error('Agent 응답 없음');
-
-      // 응답 처리
-      const response = {
-        type: 'text',
-        content: result.output
-      };
-      
-      session.addMessage('assistant', JSON.stringify(response));
-      return JSON.stringify(response);
-    } catch (error) {
-      logger.error('일반 대화 처리 중 오류:', error);
       throw error;
     }
   }
@@ -347,7 +317,7 @@ export class ChatService {
 
         // 예약 성공 처리
         const response = `예약이 완료되었습니다! \n\n` +
-          `- **예약자 이름:** ${info.userName}\n` +
+          `- **예약자 ��름:** ${info.userName}\n` +
           `- **회의 목적:** ${info.content}\n` +
           `- **예약 날짜:** ${info.date.toLocaleDateString('ko-KR')}\n` +
           `- **예약 시간:** ${info.startTime} - ${this.calculateEndTime(info.startTime, info.duration)}\n` +
@@ -400,22 +370,5 @@ export class ChatService {
 
     // 예약이 완료되지 않은 경우 기존 로직 수행
     return await this.handleError(parsedResponse, onStream);
-  }
-
-  // 헬퍼 메소드 추가
-  private getThisWeekday(targetDay: number): Date {
-    const today = new Date();
-    const currentDay = today.getDay();
-    const distance = targetDay - currentDay;
-    const result = new Date(today);
-    result.setDate(today.getDate() + distance);
-    return result;
-  }
-
-  private getNextWeekday(targetDay: number): Date {
-    const today = new Date();
-    const result = new Date(today);
-    result.setDate(today.getDate() + (7 - today.getDay()) + targetDay);
-    return result;
   }
 } 
