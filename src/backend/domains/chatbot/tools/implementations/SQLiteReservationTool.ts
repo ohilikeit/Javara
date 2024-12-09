@@ -1,6 +1,6 @@
 import { IReservationTool } from '../interfaces/IReservationTool';
 import { DateParsingTool } from './DateParsingTool';
-import { ReservationValidator } from '../../validators/ReservationValidator';
+import { ReservationValidator } from '../../tools/validators/ReservationValidator';
 import { logger } from '@/utils/logger';
 
 interface CreateReservationParams {

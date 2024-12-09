@@ -1,14 +1,6 @@
 import { logger } from '@/utils/logger';
+import { ReservationInfo } from '../types/ReservationTypes';
 
-export interface ReservationInfo {
-  date?: Date;
-  timeRange?: string;
-  startTime?: string;
-  duration?: number;
-  roomId?: number;
-  userName?: string;
-  content?: string;
-}
 
 export enum ReservationState {
   COLLECTING_INFO = 'COLLECTING_INFO',

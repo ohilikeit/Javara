@@ -4,16 +4,7 @@ import { IReservationTool } from "./interfaces/IReservationTool";
 import { SQLiteReservationTool } from "./implementations/SQLiteReservationTool";
 import { logger } from "@/utils/logger";
 import { ReservationValidator } from "./validators/ReservationValidator";
-
-interface ReservationInfo {
-  date?: string;
-  startTime?: string;
-  duration?: number;
-  roomId?: number;
-  userName?: string;
-  content?: string;
-  timeRange?: string;
-}
+import { ReservationInfo } from "../types/ReservationTypes";
 
 export class ReservationTools {
   private reservationTool: IReservationTool;
@@ -408,7 +399,7 @@ export class ReservationTools {
                   '월': 1, '화': 2, '수': 3, '목': 4, '금': 5
                 };
                 const targetDate = this.getNextWeekday(dayMap[dayMatch[1]]);
-                info.date = targetDate.toISOString().split('T')[0];
+                info.date = targetDate;
               }
             }
 
