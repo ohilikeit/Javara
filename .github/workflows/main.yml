@@ -1,10 +1,13 @@
-# main.yml 파일 예시
+---
 
 name: GPT Code Review
 
-on: 
+on:
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: 
+      - opened
+      - reopened 
+      - synchronize
 
 permissions:
   pull-requests: write
@@ -27,8 +30,9 @@ jobs:
       - name: Run GPT Code Review
         uses: anc95/ChatGPT-CodeReview@main
         env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           LANGUAGE: Korean
           MODEL: gpt-4o-mini
           PROMPT: ${{ steps.prompt.outputs.content }}
+          
