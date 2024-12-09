@@ -135,8 +135,8 @@ export default function Component() {
                 className="w-80"
                 style={{
                   position: 'fixed',
-                  left: `${mousePosition.x - 510}px`,
-                  top: `${mousePosition.y - 150}px`,
+                  left: `${mousePosition.x - 400}px`,
+                  top: `${mousePosition.y - 400}px`,
                 }}
               >
                 <TimeTable roomNumber={1} />
@@ -154,8 +154,8 @@ export default function Component() {
                 className="w-80"
                 style={{
                   position: 'fixed',         
-                  left: `${mousePosition.x - 510}px`,
-                  top: `${mousePosition.y - 150}px`,
+                  left: `${mousePosition.x - 400}px`,
+                  top: `${mousePosition.y - 400}px`,
                 }}
               >
                 <TimeTable roomNumber={4} />
@@ -170,8 +170,8 @@ export default function Component() {
                 className="w-80"
                 style={{
                   position: 'fixed',
-                  left: `${mousePosition.x - 510}px`,
-                  top: `${mousePosition.y - 150}px`,
+                  left: `${mousePosition.x - 400}px`,
+                  top: `${mousePosition.y - 400}px`,
                 }}
               >
                 <TimeTable roomNumber={5} />
@@ -186,8 +186,8 @@ export default function Component() {
                 className="w-80"
                 style={{
                   position: 'fixed',
-                  left: `${mousePosition.x -510}px`,
-                  top: `${mousePosition.y -150}px`,
+                  left: `${mousePosition.x - 400}px`,
+                  top: `${mousePosition.y - 400}px`,
                 }}
               >
                 <TimeTable roomNumber={6} />
