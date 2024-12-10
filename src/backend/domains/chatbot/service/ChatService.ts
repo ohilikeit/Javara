@@ -1,15 +1,11 @@
 import { ChatOpenAI } from "@langchain/openai";
-import { ChatSessionEntity } from '../entity/ChatSessionEntity';
+import { ChatSessionEntity, ReservationState } from '../entity/ChatSessionEntity';
 import { IReservationTool } from '../tools/interfaces/IReservationTool';
 import { SQLiteReservationTool } from '../tools/implementations/SQLiteReservationTool';
 import { ReservationTools } from '../tools/ToolDefinitions';
 import { AgentExecutor, createOpenAIFunctionsAgent } from "langchain/agents";
-import { ReservationState } from '../entity/ChatSessionEntity';
 import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { RunnableSequence } from "@langchain/core/runnables";
-import { formatToOpenAIFunctionMessages } from "langchain/agents/format_scratchpad";
 import { ReservationInfo } from '../types/ReservationTypes';
-import { AgentStep } from 'langchain/agents';
 import { logger } from '@/utils/logger';
 import { DateParsingTool } from '../tools/implementations/DateParsingTool';
 
@@ -317,7 +313,7 @@ export class ChatService {
 
         // 예약 성공 처리
         const response = `예약이 완료되었습니다! \n\n` +
-          `- **예약자 ��름:** ${info.userName}\n` +
+          `- **예약자 이름:** ${info.userName}\n` +
           `- **회의 목적:** ${info.content}\n` +
           `- **예약 날짜:** ${info.date.toLocaleDateString('ko-KR')}\n` +
           `- **예약 시간:** ${info.startTime} - ${this.calculateEndTime(info.startTime, info.duration)}\n` +

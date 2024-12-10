@@ -1,7 +1,7 @@
 import { DynamicStructuredTool } from "@langchain/core/tools";
 import { z } from "zod";
 import { logger } from "@/utils/logger";
-import { ReservationInfo } from "../entity/ChatSessionEntity";
+import { ReservationInfo } from "../types/ReservationTypes";
 
 export class MessageParsingTool {
   static getTool() {

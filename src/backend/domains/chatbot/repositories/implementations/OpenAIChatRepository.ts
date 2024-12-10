@@ -186,7 +186,7 @@ export class OpenAIChatRepository implements IChatRepository {
     return contextParts.join('\n');
   }
 
-  // 대화 히스토리 ���리 메서드 추가
+  // 대화 히스토리 관리 메서드 추가
   public clearHistory(): void {
     this.messageHistory = [this.messageHistory[0]]; // 시스템 프롬프트만 유지
   }
