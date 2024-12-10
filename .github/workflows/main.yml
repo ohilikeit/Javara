@@ -42,11 +42,13 @@ jobs:
       # prompt와 diff를 합쳐 하나의 combined_prompt.txt 파일 생성
       - name: Combine Prompt and Diff
         run: |
-          printf "%s\n" "${{ steps.prompt.outputs.content }}" > combined_prompt.txt
-          printf "\n" >> combined_prompt.txt
-          printf "----- PR DIFF START -----\n" >> combined_prompt.txt
-          printf "%s\n" "${{ steps.diff.outputs.content }}" >> combined_prompt.txt
-          printf "----- PR DIFF END -----\n" >> combined_prompt.txt
+          cat <<EOF > combined_prompt.txt
+          ${{ steps.prompt.outputs.content }}
+
+          ----- PR DIFF START -----
+          ${{ steps.diff.outputs.content }}
+          ----- PR DIFF END -----
+          EOF
 
       # curl을 이용하여 OpenAI API 호출
       - name: Run GPT Code Review Once via curl
