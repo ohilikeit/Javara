@@ -69,6 +69,17 @@ export default function Component() {
 
   const handleReservation = async () => {
     try {
+      if (!date || !timeSlot) {
+        throw new Error('날짜와 시간을 선택해주세요');
+      }
+
+      const [hours, minutes] = timeSlot.split(':').map(Number);
+      const startDateTime = new Date(date);
+      startDateTime.setHours(hours, minutes, 0, 0);
+
+      const endDateTime = new Date(startDateTime);
+      endDateTime.setHours(hours + 1, minutes, 0, 0);
+
       const response = await fetch('/api/reservation/create', {
         method: 'POST',
         headers: {
@@ -76,9 +87,12 @@ export default function Component() {
         },
         body: JSON.stringify({
           roomId: selectedRoom,
-          date: date?.toISOString(),
-          timeSlot,
-          userName
+          startTime: startDateTime.toISOString(),
+          endTime: endDateTime.toISOString(),
+          userName,
+          content: "토론방 예약",
+          status: 1,
+          userId: 1
         }),
       });
 
