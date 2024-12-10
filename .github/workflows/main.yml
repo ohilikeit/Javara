@@ -5,11 +5,6 @@ name: GPT Code Review on Entire PR Diff
 on:
   pull_request:
     types: [opened, reopened, synchronize]
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: "PR number to review"
-        required: true
 
 jobs:
   run_code_review:
@@ -77,7 +72,9 @@ jobs:
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $OPENAI_API_KEY" \
             -d "$JSON_PAYLOAD")
-
+          
+          # RESPONSE를 Github Actions 출력 변수로 설정
+          echo "response=$(echo $RESPONSE.)" >> $GITHUB_OUTPUT
           echo "$RESPONSE"
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -87,11 +84,15 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const response = process.env.RESPONSE;
-            const pr_number = process.env.PR_NUMBER; // 필요 시 inputs나 이벤트에서 가져옴
+            const prNumber = context.payload.pull_request ? context.payload.pull_request.number : parseInt("${{ github.event.inputs.pr_number }}", 10);
+            
+            // steps.gpt_call.outputs.response에는 전체 JSON 응답이 들어있다고 가정
+            const responseJson = JSON.parse(`${{ steps.gpt_call.outputs.response }}`);
+            const content = responseJson.choices[0].message.content;
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: pr_number,
-              body: response
-            })
+              issue_number: prNumber,
+              body: content
+            });
