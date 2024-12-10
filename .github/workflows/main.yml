@@ -10,7 +10,7 @@ permissions:
   contents: read
   issues: write
   pull-requests: write
-  
+
 jobs:
   run_code_review:
     runs-on: ubuntu-latest
@@ -54,6 +54,9 @@ jobs:
       - name: Run GPT Code Review Once via curl
         id: gpt_call
         run: |
+          set -euo pipefail
+
+          # JSON_PAYLOAD 생성
           JSON_PAYLOAD=$(jq -Rs --arg system_msg "You are a senior developer ..." '{
             "model": "gpt-4o-mini",
             "messages": [
@@ -70,13 +73,14 @@ jobs:
             "max_tokens": 16384
           }' combined_prompt.txt)
 
-          RESPONSE=$(curl https://api.openai.com/v1/chat/completions \
+          # OpenAI API 호출 (HTTP 에러 시 실패하도록 -f 옵션 사용)
+          RESPONSE=$(curl -fsS https://api.openai.com/v1/chat/completions \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $OPENAI_API_KEY" \
             -d "$JSON_PAYLOAD")
 
-          # jq로 content만 추출
-          CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
+          # content 필드 추출 (jq -e: 필드 미존재 시 오류 반환)
+          CONTENT=$(echo "$RESPONSE" | jq -r -e '.choices[0].message.content')
 
           # 멀티라인 출력 형식 사용
           {
