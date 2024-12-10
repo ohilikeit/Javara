@@ -60,11 +60,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       data: {
         startTime: new Date(startTime),
         endTime: new Date(endTime),
-        roomId: Number(roomId),
-        userId: Number(userId),
         userName,
-        content,
-        status
+        content: content || "토론방 예약",
+        status: 1,
+        userId: 1,
+        roomId: Number(roomId)
       }
     });
 
