@@ -42,6 +42,7 @@ import {
   DialogTrigger,
 } from "../components/ui/dialog"
 import { ChatInterface } from "../components/chat/ChatInterface"
+import { Input } from "../components/ui/input"
 
 export default function Component() {
   const [date, setDate] = React.useState<Date>()
@@ -53,6 +54,7 @@ export default function Component() {
     content: string;
     isBot: boolean;
   }>>([]);
+  const [userName, setUserName] = useState<string>("");
 
   const today = new Date()
   const days = ['일', '월', '화', '수', '목', '금', '토']
@@ -65,10 +67,41 @@ export default function Component() {
     setSelectedRoom(roomNumber)
   }
 
-  const handleReservation = () => {
-    console.log(`Room ${selectedRoom} reserved for ${date?.toLocaleDateString()} at ${timeSlot}`)
-    setSelectedRoom(null)
-  }
+  const handleReservation = async () => {
+    try {
+      const response = await fetch('/api/reservation/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          roomId: selectedRoom,
+          date: date?.toISOString(),
+          timeSlot,
+          userName
+        }),
+      });
+
+      if (response.ok) {
+        // 예약 성공 처리
+        console.log(`Room ${selectedRoom} reserved for ${date?.toLocaleDateString()} at ${timeSlot} by ${userName}`);
+      } else {
+        // 에러 처리
+        console.error('Reservation failed');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+    
+    // 예약 완료 후 상태 초기화
+    setSelectedRoom(null);
+    setUserName("");
+  };
+
+  const handleDialogClose = () => {
+    setSelectedRoom(null);
+    setUserName("");
+  };
 
   const handleMouseMove = (event: React.MouseEvent) => {
     setMousePosition({ x: event.clientX, y: event.clientY })
@@ -111,6 +144,7 @@ export default function Component() {
                 <SelectItem value="14:00">14:00 - 15:00</SelectItem>
                 <SelectItem value="15:00">15:00 - 16:00</SelectItem>
                 <SelectItem value="16:00">16:00 - 17:00</SelectItem>
+                <SelectItem value="16:00">17:00 - 18:00</SelectItem>
               </SelectContent>
             </Select>
 
@@ -249,20 +283,44 @@ export default function Component() {
           </div>
         </div>
 
-        <AlertDialog open={selectedRoom !== null} onOpenChange={() => setSelectedRoom(null)}>
+        <AlertDialog open={selectedRoom !== null} onOpenChange={handleDialogClose}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="text-center">토론방 {selectedRoom} 예약</AlertDialogTitle>
               <AlertDialogDescription className="text-center">
-                {date && timeSlot
-                  ? `${date.toLocaleDateString()}에 ${timeSlot} 시간대로 토론방 ${selectedRoom}을 예약하시겠습니까?`
-                  : "날짜와 시간을 선택해주세요."}
+                {(date instanceof Date) && timeSlot ? (
+                  <>
+                    {`${date.toLocaleDateString()}에 ${timeSlot} 시간대로 토론방 ${selectedRoom}을 예약하시겠습니까?`}
+                    <div className="mt-4">
+                      <label htmlFor="userName" className="block text-sm font-medium text-gray-700">
+                        예약자 이름
+                      </label>
+                      <Input
+                        id="userName"
+                        type="text"
+                        value={userName}
+                        onChange={(e) => setUserName(e.target.value)}
+                        placeholder="이름을 입력해주세요"
+                        className="mt-1"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <span className="text-red-500">날짜와 시간을 선택해주세요.</span>
+                )}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="flex justify-center">
-              <AlertDialogCancel>취소</AlertDialogCancel>
-              <AlertDialogAction onClick={handleReservation} disabled={!date || !timeSlot}>
-                예약
+              <AlertDialogCancel onClick={() => {
+                setUserName("");
+              }}>
+                취소
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleReservation}
+                disabled={!date || !timeSlot}
+              >
+                다음
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

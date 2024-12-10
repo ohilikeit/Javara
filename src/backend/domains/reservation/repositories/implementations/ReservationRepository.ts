@@ -18,7 +18,8 @@ export class ReservationRepository implements ReservationInterfaceRepository {
                     startTime: reservation.getStartTime(),
                     endTime: reservation.getEndTime(),
                     status: reservation.getStatus(),
-                    regdate: new Date()
+                    userName: reservation.getUserName(),
+                    createdAt: new Date()
                 }
             });
 
@@ -26,10 +27,11 @@ export class ReservationRepository implements ReservationInterfaceRepository {
                 createdReservation.id,
                 createdReservation.userId,
                 createdReservation.roomId,
+                createdReservation.userName,
                 createdReservation.startTime,
                 createdReservation.endTime,
                 createdReservation.status,
-                createdReservation.regdate
+                createdReservation.createdAt
             );
         } catch (error) {
             throw new Error(`Failed to create reservation: ${error instanceof Error ? error.message : 'Unknown error'}`);

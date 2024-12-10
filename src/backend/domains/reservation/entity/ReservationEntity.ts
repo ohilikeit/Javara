@@ -1,7 +1,8 @@
 export class ReservationEntity {
     private readonly reservationId: number;
     private readonly userId: number;
-    private readonly roomId: number;
+    private readonly roomId: number; 
+    private readonly userName: string;   
     private readonly startTime: Date;
     private readonly endTime: Date;
     private status: number;
@@ -11,6 +12,7 @@ export class ReservationEntity {
         reservationId: number,
         userId: number,
         roomId: number,
+        userName: string,
         startTime: Date,
         endTime: Date,
         status: number,
@@ -19,6 +21,7 @@ export class ReservationEntity {
         this.reservationId = reservationId;
         this.userId = userId;
         this.roomId = roomId;
+        this.userName = userName;
         this.startTime = startTime;
         this.endTime = endTime;
         this.status = status;
@@ -36,6 +39,10 @@ export class ReservationEntity {
 
     public getRoomId(): number {
         return this.roomId;
+    }
+
+    public getUserName(): string {
+        return this.userName;
     }
 
     public getStartTime(): Date {
