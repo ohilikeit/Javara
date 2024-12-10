@@ -5,8 +5,11 @@ name: GPT Code Review on Entire PR Diff
 on:
   pull_request:
     types: [opened, reopened, synchronize]
-  push:
-    branches: [ docs/upgrade_gpt_review]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to review"
+        required: true
 
 jobs:
   run_code_review:
