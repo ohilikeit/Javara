@@ -70,12 +70,15 @@ jobs:
             -H "Authorization: Bearer $OPENAI_API_KEY" \
             -d "$JSON_PAYLOAD")
 
-          # JSON 구조 검증
-          echo "$RESPONSE" | jq '.' > /dev/null
-
-          # 필요한 content만 추출하여 GITHUB_OUTPUT로 내보냄
+          # jq로 content만 추출
           CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
-          echo "content=$CONTENT" >> $GITHUB_OUTPUT
+
+          # 멀티라인 출력 형식 사용
+          {
+            echo "content<<EOF"
+            echo "$CONTENT"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
