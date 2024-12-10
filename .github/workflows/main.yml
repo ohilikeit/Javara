@@ -53,26 +53,31 @@ jobs:
       # curl을 이용하여 OpenAI API 호출
       - name: Run GPT Code Review Once via curl
         run: |
+          # jq를 사용해 combined_prompt.txt의 모든 내용을 하나의 JSON 문자열로 변환합니다.
+          # -R: raw input
+          # -s: 모든 입력을 하나의 문자열로 취급
+          # 이로써 combined_prompt.txt 안의 개행, 따옴표 등이 모두 JSON에 맞게 이스케이프됩니다.
+          JSON_PAYLOAD=$(jq -Rs --arg system_msg "You are a senior developer experienced in Next.js, TypeScript, clean architecture, and SOLID principles, providing a thorough code review based on the given instructions." '{
+            "model": "gpt-4o-mini",
+            "messages": [
+              {
+                "role": "system",
+                "content": $system_msg
+              },
+              {
+                "role": "user",
+                "content": .
+              }
+            ],
+            "temperature": 0.7,
+            "max_tokens": 16384
+          }' combined_prompt.txt)
+
           RESPONSE=$(curl https://api.openai.com/v1/chat/completions \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $OPENAI_API_KEY" \
-            -d '{
-              "model": "gpt-4o-mini",
-              "messages": [
-                {
-                  "role": "system",
-                  "content": "You are a senior developer experienced in Next.js, TypeScript, clean architecture, and SOLID principles, providing a thorough code review based on the given instructions."
-                },
-                {
-                  "role": "user",
-                  "content": "'"$(cat combined_prompt.txt | sed 's/"/\\"/g')"'"
-                }
-              ],
-              "temperature": 0.7,
-              "max_tokens": 16384
-            }')
+            -d "$JSON_PAYLOAD")
 
-          # OpenAI 응답 출력 (JSON 파싱은 필요에 따라 진행)
           echo "$RESPONSE"
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
