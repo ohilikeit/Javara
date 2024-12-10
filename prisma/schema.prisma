@@ -33,8 +33,8 @@ model Reservation {
   id         Int      @id @default(autoincrement())
   roomId     Int
   userId     Int
-  startTime  DateTime
-  endTime    DateTime
+  startTime  String   // YYYYMMDDHHMM 형식 (예: "202412101300")
+  endTime    String   // YYYYMMDDHHMM 형식 (예: "202412101400")
   userName   String
   content    String?
   status     Int      @default(1)  // 1: 활성, 0: 취소
