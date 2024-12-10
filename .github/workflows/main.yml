@@ -1,17 +1,12 @@
 ---
 
-name: GPT Code Review
+name: GPT Code Review on Entire PR Diff
 
 on:
   pull_request:
-    types: 
-      - opened
-      - reopened 
-      - synchronize
-
-permissions:
-  pull-requests: write
-  contents: read
+    types: [opened, reopened, synchronize]
+  push:
+    branches: [ docs/upgrade_gpt_review]
 
 jobs:
   run_code_review:
@@ -21,18 +16,58 @@ jobs:
         with:
           fetch-depth: 0
 
+      # PR 전체 diff 추출
+      - name: Fetch PR Diff
+        run: |
+          git fetch origin +refs/pull/${{ github.event.pull_request.number }}/merge
+          git diff origin/${{ github.event.pull_request.base.ref }}...origin/${{ github.event.pull_request.head.ref }} > pr_diff.txt
+
+      # code-review-prompt.txt 파일 읽기
       - name: Read Prompt file
         id: prompt
         uses: juliangruber/read-file-action@v1
         with:
           path: ./.github/workflows/code-review-prompt.txt
 
-      - name: Run GPT Code Review
-        uses: anc95/ChatGPT-CodeReview@main
+      # PR diff 읽기
+      - name: Read PR Diff
+        id: diff
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: ./pr_diff.txt
+
+      # prompt와 diff를 합쳐 하나의 combined_prompt.txt 파일 생성
+      - name: Combine Prompt and Diff
+        run: |
+          echo "${{ steps.prompt.outputs.content }}" > combined_prompt.txt
+          echo "" >> combined_prompt.txt
+          echo "----- PR DIFF START -----" >> combined_prompt.txt
+          echo "${{ steps.diff.outputs.content }}" >> combined_prompt.txt
+          echo "----- PR DIFF END -----" >> combined_prompt.txt
+
+      # curl을 이용하여 OpenAI API 호출
+      - name: Run GPT Code Review Once via curl
+        run: |
+          RESPONSE=$(curl https://api.openai.com/v1/chat/completions \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -d '{
+              "model": "gpt-4o-mini",
+              "messages": [
+                {
+                  "role": "system",
+                  "content": "You are a senior developer experienced in Next.js, TypeScript, clean architecture, and SOLID principles, providing a thorough code review based on the given instructions."
+                },
+                {
+                  "role": "user",
+                  "content": "'"$(cat combined_prompt.txt | sed 's/"/\\"/g')"'"
+                }
+              ],
+              "temperature": 0.7,
+              "max_tokens": 16384
+            }')
+
+          # OpenAI 응답 출력 (JSON 파싱은 필요에 따라 진행)
+          echo "$RESPONSE"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          LANGUAGE: Korean
-          MODEL: gpt-4o-mini
-          PROMPT: ${{ steps.prompt.outputs.content }}
-          
