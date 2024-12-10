@@ -1,17 +1,15 @@
 ---
 
-name: GPT Code Review
+name: GPT Code Review on Entire PR Diff
 
 on:
   pull_request:
-    types: 
-      - opened
-      - reopened 
-      - synchronize
+    types: [opened, reopened, synchronize]
 
 permissions:
-  pull-requests: write
   contents: read
+  issues: write
+  pull-requests: write
 
 jobs:
   run_code_review:
@@ -21,18 +19,96 @@ jobs:
         with:
           fetch-depth: 0
 
+      # PR 전체 diff 추출
+      - name: Fetch PR Diff
+        run: |
+          git fetch origin +refs/pull/${{ github.event.pull_request.number }}/merge
+          git diff origin/${{ github.event.pull_request.base.ref }}...origin/${{ github.event.pull_request.head.ref }} > pr_diff.txt
+
+      # code-review-prompt.txt 파일 읽기
       - name: Read Prompt file
         id: prompt
         uses: juliangruber/read-file-action@v1
         with:
           path: ./.github/workflows/code-review-prompt.txt
 
-      - name: Run GPT Code Review
-        uses: anc95/ChatGPT-CodeReview@main
+      # PR diff 읽기
+      - name: Read PR Diff
+        id: diff
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: ./pr_diff.txt
+
+      # prompt와 diff를 합쳐 하나의 combined_prompt.txt 파일 생성
+      - name: Combine Prompt and Diff
+        run: |
+          cat <<'EOF' > combined_prompt.txt
+          ${{ steps.prompt.outputs.content }}
+
+          ----- PR DIFF START -----
+          ${{ steps.diff.outputs.content }}
+          ----- PR DIFF END -----
+          EOF
+
+      # curl을 이용하여 OpenAI API 호출
+      - name: Run GPT Code Review Once via curl
+        id: gpt_call
+        run: |
+          set -euo pipefail
+
+          # JSON_PAYLOAD 생성
+          JSON_PAYLOAD=$(jq -Rs --arg system_msg "You are a senior developer ..." '{
+            "model": "gpt-4o-mini",
+            "messages": [
+              {
+                "role": "system",
+                "content": $system_msg
+              },
+              {
+                "role": "user",
+                "content": .
+              }
+            ],
+            "temperature": 0.7,
+            "max_tokens": 16384
+          }' combined_prompt.txt)
+
+          # OpenAI API 호출 (HTTP 에러 시 실패하도록 -f 옵션 사용)
+          RESPONSE=$(curl -fsS https://api.openai.com/v1/chat/completions \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -d "$JSON_PAYLOAD")
+
+          # content 필드 추출 (jq -e: 필드 미존재 시 오류 반환)
+          CONTENT=$(echo "$RESPONSE" | jq -r -e '.choices[0].message.content')
+
+          # 멀티라인 출력 형식 사용
+          {
+            echo "content<<EOF"
+            echo "$CONTENT"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Post comment on PR
+        run: |
+          # 이벤트 타입에 따라 PR 번호 가져오기
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            prNumber=${{ github.event.pull_request.number }}
+          else
+            prNumber=${{ github.event.inputs.pr_number }}
+          fi
+
+          # GPT 응답 내용(JSON 안전하게 변환)
+          BODY=$(printf %s "${{ steps.gpt_call.outputs.content }}" | jq -Rs .)
+
+          # GitHub API로 PR 코멘트 작성
+          curl -sS \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -X POST \
+            -d "{\"body\": ${BODY}}" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/${prNumber}/comments"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          LANGUAGE: Korean
-          MODEL: gpt-4o-mini
-          PROMPT: ${{ steps.prompt.outputs.content }}
-          
