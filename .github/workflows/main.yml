@@ -42,7 +42,7 @@ jobs:
       # prompt와 diff를 합쳐 하나의 combined_prompt.txt 파일 생성
       - name: Combine Prompt and Diff
         run: |
-          cat <<EOF > combined_prompt.txt
+          cat <<'EOF' > combined_prompt.txt
           ${{ steps.prompt.outputs.content }}
 
           ----- PR DIFF START -----
