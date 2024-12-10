@@ -83,14 +83,23 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
       - name: Post comment on PR
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const prNumber = context.payload.pull_request ? context.payload.pull_request.number : parseInt("${{ github.event.inputs.pr_number }}", 10);
-            const body = `${{ steps.gpt_call.outputs.content }}`;
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-              body: body
-            });
+        run: |
+          # 이벤트 타입에 따라 PR 번호 가져오기
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            prNumber=${{ github.event.pull_request.number }}
+          else
+            prNumber=${{ github.event.inputs.pr_number }}
+          fi
+
+          # GPT 응답 내용(JSON 안전하게 변환)
+          BODY=$(printf %s "${{ steps.gpt_call.outputs.content }}" | jq -Rs .)
+
+          # GitHub API로 PR 코멘트 작성
+          curl -sS \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -X POST \
+            -d "{\"body\": ${BODY}}" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/${prNumber}/comments"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
