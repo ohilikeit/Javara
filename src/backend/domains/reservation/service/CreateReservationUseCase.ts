@@ -15,6 +15,7 @@ export class CreateReservationUseCase implements CreateReservationInterfaceUseCa
                 0, // temporary id
                 data.userId,
                 data.roomId,
+                data.userName,
                 data.startTime,
                 data.endTime,
                 data.status,

@@ -3,8 +3,8 @@ export class ReservationEntity {
     private readonly userId: number;
     private readonly roomId: number; 
     private readonly userName: string;   
-    private readonly startTime: Date;
-    private readonly endTime: Date;
+    private readonly startTime: string;
+    private readonly endTime: string;
     private status: number;
     private readonly regdate: Date;
 
@@ -13,8 +13,8 @@ export class ReservationEntity {
         userId: number,
         roomId: number,
         userName: string,
-        startTime: Date,
-        endTime: Date,
+        startTime: string,
+        endTime: string,
         status: number,
         regdate: Date
     ) {
@@ -45,11 +45,11 @@ export class ReservationEntity {
         return this.userName;
     }
 
-    public getStartTime(): Date {
+    public getStartTime(): string {
         return this.startTime;
     }
 
-    public getEndTime(): Date {
+    public getEndTime(): string {
         return this.endTime;
     }
 
