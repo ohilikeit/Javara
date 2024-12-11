@@ -126,15 +126,15 @@ export default function Component() {
   }
 
   return (
-    <div className="min-h-screen bg-[#3b547b]/5">
+    <div className="min-h-screen bg-gradient-to-br from-[#f5f7fa] to-[#eef2f7]">
       <div className="container mx-auto p-6">
-        <div className="mb-8 rounded-lg bg-white p-4 shadow-md">
+        <div className="mb-8 rounded-2xl bg-white/80 backdrop-blur-sm p-6 shadow-lg ring-1 ring-black/5">
           <div className="grid gap-4 md:grid-cols-3">
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="w-full justify-center text-center font-normal"
+                  className="w-full justify-center text-center font-medium transition-all hover:bg-slate-100 hover:border-slate-300"
                 >
                   <Calendar className="mr-2 h-4 w-4" />
                   {date ? date.toLocaleDateString() : "날짜 선택"}
@@ -146,15 +146,16 @@ export default function Component() {
                   selected={date}
                   onSelect={setDate}
                   initialFocus
+                  className="rounded-lg border shadow-lg"
                 />
               </PopoverContent>
             </Popover>
 
             <Select value={timeSlot} onValueChange={setTimeSlot}>
-              <SelectTrigger className="text-center">
+              <SelectTrigger className="text-center transition-all hover:bg-slate-100 hover:border-slate-300">
                 <SelectValue placeholder="시간대 선택" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-lg border shadow-lg">
                 <SelectItem value="09:00">09:00 - 10:00</SelectItem>
                 <SelectItem value="10:00">10:00 - 11:00</SelectItem>
                 <SelectItem value="11:00">11:00 - 12:00</SelectItem>
@@ -168,16 +169,15 @@ export default function Component() {
 
             <Button
               onClick={handleSearch}
-              className="bg-[#3b547b] text-white hover:bg-[#3b547b]/90"
+              className="bg-[#3b547b] text-white hover:bg-[#4a6491] transition-colors shadow-md"
             >
               <Search className="mr-2 h-4 w-4" />
               검색
             </Button>
           </div>
         </div>
-
-        <div className="relative mx-auto max-w-4xl rounded-lg border-2 border-[#3b547b] p-4">
-          <div className="aspect-[2/1] w-full" onMouseMove={handleMouseMove}>
+        <div className="container mx-auto rounded-2xl shadow-lg">
+          <div className="mb-8 rounded-2xl border border-[#3b547b]/20 bg-white/80 backdrop-blur-sm aspect-[2/1] w-full" onMouseMove={handleMouseMove}>
             {/* Rooms */}
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
@@ -356,7 +356,7 @@ function TimeTable({ roomNumber }: { roomNumber: number }) {
   const timeSlots = Array.from({ length: 9 }, (_, i) => `${i + 9}:00`)
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-md">
+    <div className="p-4 bg-white rounded-xl shadow-xl border border-[#3b547b]/10">
       <div className="mb-4 text-lg font-semibold text-[#3b547b] text-center">
         {`${today.getMonth() + 1}월 ${today.getDate()}일 (${days[today.getDay()]}) 토론방 ${roomNumber}`}
       </div>
@@ -364,12 +364,10 @@ function TimeTable({ roomNumber }: { roomNumber: number }) {
         {timeSlots.map((time) => (
           <div
             key={time}
-            className={`flex items-center justify-between rounded-md p-2 text-sm
-              ${'bg-[#3b547b] text-white'}
-            `}
+            className="flex items-center justify-between rounded-lg p-2 text-sm hover:bg-[#3b547b]/5 transition-colors"
           >
-            <span className="w-1/2 text-center">{time}</span>
-            <span className="w-1/2 text-center">
+            <span className="w-1/2 text-center font-medium text-[#3b547b]/80">{time}</span>
+            <span className="w-1/2 text-center text-[#3b547b]">
               예약가능
             </span>
           </div>
@@ -384,30 +382,30 @@ function AllRoomsTimetable() {
   const roomNumbers = [1, 4, 5, 6]
 
   return (
-    <div className="overflow-x-auto bg-white rounded-lg shadow-md p-4">
+    <div className="overflow-x-auto bg-white rounded-xl shadow-lg p-6">
       <table className="w-full border-collapse">
         <thead>
           <tr>
-            <th className="border-b-2 border-[#3b547b] p-2 text-center text-[#3b547b]">시간</th>
+            <th className="border-b-2 border-[#3b547b]/20 p-3 text-center text-[#3b547b] font-medium">시간</th>
             {roomNumbers.map(roomNumber => (
-              <th key={roomNumber} className="border-b-2 border-[#3b547b] p-2 text-center text-[#3b547b]">토론방 {roomNumber}</th>
+              <th key={roomNumber} className="border-b-2 border-[#3b547b]/20 p-3 text-center text-[#3b547b] font-medium">
+                토론방 {roomNumber}
+              </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {timeSlots.map(time => (
-            <tr key={time} className="hover:bg-gray-50">
-              <td className="border-b border-gray-200 p-2 text-center">{time}</td>
-              {roomNumbers.map(roomNumber => {
-                return (
-                  <td 
-                    key={`${roomNumber}-${time}`} 
-                    className={`border-b border-gray-200 p-2 text-center ${'text-[#3b547b]'}`}
-                  >
-                    예약가능
-                  </td>
-                );
-              })}
+            <tr key={time} className="hover:bg-[#3b547b]/5 transition-colors">
+              <td className="border-b border-[#3b547b]/10 p-3 text-center text-[#3b547b]/80">{time}</td>
+              {roomNumbers.map(roomNumber => (
+                <td 
+                  key={`${roomNumber}-${time}`} 
+                  className="border-b border-[#3b547b]/10 p-3 text-center text-[#3b547b]"
+                >
+                  예약가능
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>
@@ -432,17 +430,20 @@ function Room({
   return (
     <div
       onClick={available ? onClick : undefined}
-      className={`border-2 text-center text-sm flex items-center justify-center ${className}
+      className={`border rounded-xl text-center text-sm flex items-center justify-center transition-all duration-200 ${className}
         ${
           disabled
-            ? "border-gray-300 bg-gray-100 text-gray-500"
+            ? "border-slate-200 bg-slate-50 text-slate-400"
             : available
-            ? "border-[#3b547b] bg-[#3b547b] text-white cursor-pointer hover:bg-[#3b547b]/90"
-            : "border-[#3b547b]/20 bg-white text-[#3b547b]"
+            ? "border-[#3b547b]/20 bg-[#3b547b] text-white cursor-pointer hover:bg-[#4a6491] shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+            : "border-[#3b547b]/20 bg-white text-[#3b547b] hover:bg-[#3b547b]/5"
         }
       `}
     >
-      토론방 {number}
+      <div className="flex flex-col items-center gap-1">
+        <span className="font-medium">토론방 {number}</span>
+        {available && <span className="text-xs opacity-80">예약가능</span>}
+      </div>
     </div>
   )
 }
