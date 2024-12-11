@@ -4,6 +4,7 @@ import { IReservationTool } from "./interfaces/IReservationTool";
 import { SQLiteReservationTool } from "./implementations/SQLiteReservationTool";
 import { logger } from "@/utils/logger";
 import { ReservationValidator } from "./validators/ReservationValidator";
+import { DateUtils } from "../utils/dateUtils";
 
 interface ReservationInfo {
   date?: string;
@@ -145,7 +146,7 @@ export class ReservationTools {
         name: "check_availability",
         description: "특정 날짜와 시간의 토론방 예약 가능 여부를 확인합니다.",
         schema: z.object({
-          date: z.string().describe("검색할 날짜 (YYYY-MM-DD 형식)"),
+          date: z.string().describe("검색할 날짜 (YYYY-MM-DD 형)"),
           startTime: z.string().optional().describe("시작 시간 (HH:00 형식)"),
           roomId: z.number().optional().describe("토론방 번호 (1,4,5,6 중 선택)")
         }),
@@ -171,7 +172,7 @@ export class ReservationTools {
         description: "예약을 생성합니다.",
         schema: z.object({
           date: z.string().describe("예약 날짜 (YYYY-MM-DD 형식)"),
-          startTime: z.string().describe("시작 시간 (HH:00 형식)"),
+          startTime: z.string().describe("시작 시간 (HH:mm 형식)"),
           duration: z.number().describe("사용 시간 (시간 단위)"),
           roomId: z.number().describe("토론방 번호 (1,4,5,6 중 선택)"),
           userName: z.string().describe("예약자 이름"),
@@ -181,6 +182,9 @@ export class ReservationTools {
           const reservationKey = `${date}_${startTime}_${roomId}`;
           
           try {
+            const reservationDateTime = DateUtils.toReservationDateTime(date, startTime);
+            const endDateTime = DateUtils.calculateEndTime(reservationDateTime, duration);
+
             // 중복 예약 방지를 위한 락 확인
             if (this.activeReservations.get(reservationKey)) {
               return JSON.stringify({
@@ -192,7 +196,7 @@ export class ReservationTools {
             
             this.activeReservations.set(reservationKey, true);
 
-            // 토론방 번호가 없는 경우 가용한 방 찾기
+            // ���론방 번호가 없는 경우 가용한 방 찾기
             if (!roomId) {
               const availability = await this.reservationTool.checkAvailability(
                 new Date(date),
@@ -278,111 +282,7 @@ export class ReservationTools {
             });
 
           } finally {
-            // 락 해제
             this.activeReservations.delete(reservationKey);
-          }
-        }
-      }),
-      new DynamicStructuredTool({
-        name: "parse_date",
-        description: "날짜 문자열을 파싱하여 실제 달력 기반의 날짜 정보를 반환합니다.",
-        schema: z.object({
-          dateString: z.string().describe("파싱할 날짜 문자열 (예: '다음주 화요일', '내일', 'YYYY-MM-DD')")
-        }),
-        func: async ({ dateString }) => {
-          try {
-            const today = new Date();
-            let targetDate = new Date(); // 기본값으로 초기화
-
-            // 상대적 날짜 처리
-            if (dateString.includes('다음주')) {
-              // 다음주 특정 요일 처리
-              const dayMap: { [key: string]: number } = {
-                '월요일': 1, '화요일': 2, '수요일': 3, '목요일': 4, '금요일': 5,
-                '월욜': 1, '화욜': 2, '수욜': 3, '목욜': 4, '금욜': 5
-              };
-
-              for (const [day, num] of Object.entries(dayMap)) {
-                if (dateString.includes(day)) {
-                  targetDate = this.getNextWeekday(num);
-                  break;
-                }
-              }
-            } else if (dateString.includes('이번주')) {
-              // 이번주 특정 요일 처리
-              const dayMap: { [key: string]: number } = {
-                '요일': 1, '화요일': 2, '수요일': 3, '목요일': 4, '금요일': 5,
-                '월욜': 1, '화욜': 2, '수욜': 3, '목욜': 4, '금욜': 5
-              };
-
-              for (const [day, num] of Object.entries(dayMap)) {
-                if (dateString.includes(day)) {
-                  targetDate = this.getThisWeekday(num);
-                  break;
-                }
-              }
-            } else if (dateString === '내일') {
-              targetDate = new Date(today);
-              targetDate.setDate(today.getDate() + 1);
-            } else if (dateString === '모레') {
-              targetDate = new Date(today);
-              targetDate.setDate(today.getDate() + 2);
-            } else {
-              // YYYY-MM-DD 형식 처리
-              targetDate = new Date(dateString);
-            }
-
-            // 날짜가 유효하지 않은 경우
-            if (!targetDate || isNaN(targetDate.getTime())) {
-              throw new Error('유효하지 않은 날짜 형식입니다.');
-            }
-
-            // 주말인 경우
-            const dayOfWeek = targetDate.getDay();
-            if (dayOfWeek === 0 || dayOfWeek === 6) {
-              return JSON.stringify({
-                success: false,
-                error: '주말은 예약이 불가능합니다.',
-                date: targetDate.toISOString(),
-                dayOfWeek
-              });
-            }
-
-            // 과거 날짜인 경우
-            if (targetDate < today) {
-              return JSON.stringify({
-                success: false,
-                error: '과거 날짜는 예약할 수 없습니다.',
-                date: targetDate.toISOString(),
-                dayOfWeek
-              });
-            }
-
-            // 2주 이후인 경우
-            const twoWeeksLater = new Date(today);
-            twoWeeksLater.setDate(today.getDate() + 14);
-            if (targetDate > twoWeeksLater) {
-              return JSON.stringify({
-                success: false,
-                error: '2주 이후의 날짜는 예약할 수 없습니다.',
-                date: targetDate.toISOString(),
-                dayOfWeek
-              });
-            }
-
-            return JSON.stringify({
-              success: true,
-              date: targetDate.toISOString(),
-              dayOfWeek,
-              dayName: ['일', '월', '화', '수', '목', '금', '토'][dayOfWeek],
-              formattedDate: targetDate.toLocaleDateString()
-            });
-          } catch (error) {
-            logger.error('parse_date 에러:', error);
-            return JSON.stringify({
-              success: false,
-              error: error instanceof Error ? error.message : '날짜 파싱 중 오류가 발생했습니다.'
-            });
           }
         }
       }),
@@ -449,69 +349,6 @@ export class ReservationTools {
             return JSON.stringify({
               success: false,
               error: error instanceof Error ? error.message : '파싱 실패'
-            });
-          }
-        }
-      }),
-      new DynamicStructuredTool({
-        name: "extract_conversation_date",
-        description: "대화 내역과 현재 쿼리에서 예약 날짜 정보를 추출합니다.",
-        schema: z.object({
-          currentQuery: z.string().describe("현재 사용자의 쿼리"),
-          messageHistory: z.array(z.object({
-            role: z.enum(['system', 'user', 'assistant']),
-            content: z.string()
-          })).describe("이전 대화 내역"),
-          currentDate: z.string().optional().describe("현재 저장된 날짜 정보")
-        }),
-        func: async ({ currentQuery, messageHistory, currentDate }) => {
-          try {
-            // 날짜 관련 키워드 추출
-            const dateKeywords = messageHistory
-              .filter(msg => msg.role !== 'system')
-              .map(msg => msg.content)
-              .concat(currentQuery);
-
-            let targetDate: Date | null = null;
-            
-            // 현재 저장된 날짜가 있다면 우선 사용
-            if (currentDate) {
-              targetDate = new Date(currentDate);
-            }
-
-            // 새로운 날짜 정보가 있는지 확인
-            for (const content of dateKeywords.reverse()) { // 최신 메시지부터 확인
-              if (content.includes('다음주')) {
-                const dayMatch = content.match(/(월|화|수|목|금)요일/);
-                if (dayMatch) {
-                  const dayMap: { [key: string]: number } = {
-                    '월': 1, '화': 2, '수': 3, '목': 4, '금': 5
-                  };
-                  targetDate = this.getNextWeekday(dayMap[dayMatch[1]]);
-                  break;
-                }
-              }
-              // 다른 날짜 패턴들도 여기서 처리
-            }
-
-            if (!targetDate) {
-              return JSON.stringify({
-                success: false,
-                error: "날짜 정보를 찾을 수 없습니다."
-              });
-            }
-
-            return JSON.stringify({
-              success: true,
-              date: targetDate.toISOString(),
-              formattedDate: targetDate.toLocaleDateString('ko-KR'),
-              dayOfWeek: ['일', '월', '화', '수', '목', '금', '토'][targetDate.getDay()]
-            });
-          } catch (error) {
-            logger.error('날짜 추출 실패:', error);
-            return JSON.stringify({
-              success: false,
-              error: error instanceof Error ? error.message : "날짜 추출 중 오류가 발생했습니다."
             });
           }
         }
