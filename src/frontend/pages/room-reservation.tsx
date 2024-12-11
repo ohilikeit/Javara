@@ -305,11 +305,13 @@ export default function Component() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="text-center">토론방 {selectedRoom} 예약</AlertDialogTitle>
-              <AlertDialogDescription className="text-center">
+              <AlertDialogDescription className="space-y-4">
                 {(date instanceof Date) && timeSlot ? (
                   <>
-                    {`${date.toLocaleDateString()}에 ${timeSlot} 시간대로 토론방 ${selectedRoom}을 예약하시겠습니까?`}
-                    <div className="mt-4">
+                    <p className="text-center">
+                      {`${date.toLocaleDateString()}에 ${timeSlot} 시간대로 토론방 ${selectedRoom}을 예약하시겠습니까?`}
+                    </p>
+                    <div>
                       <label htmlFor="userName" className="block text-sm font-medium text-gray-700">
                         예약자 이름
                       </label>
@@ -324,7 +326,7 @@ export default function Component() {
                     </div>
                   </>
                 ) : (
-                  <span className="text-red-500">날짜와 시간을 선택해주세요.</span>
+                  <p className="text-red-500 text-center">날짜와 시간을 선택해주세요.</p>
                 )}
               </AlertDialogDescription>
             </AlertDialogHeader>
