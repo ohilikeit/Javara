@@ -73,12 +73,19 @@ export default function Component() {
         throw new Error('날짜와 시간을 선택해주세요');
       }
 
-      const [hours, minutes] = timeSlot.split(':').map(Number);
-      const startDateTime = new Date(date);
-      startDateTime.setHours(hours, minutes, 0, 0);
+      // YYYYMMDDHHMM 형식으로 변환
+      const formatToTimeString = (date: Date, timeStr: string): string => {
+        const [hours] = timeStr.split(':').map(Number);
+        return `${date.getFullYear()}${
+          String(date.getMonth() + 1).padStart(2, '0')}${
+          String(date.getDate()).padStart(2, '0')}${
+          String(hours).padStart(2, '0')}00`;
+      };
 
-      const endDateTime = new Date(startDateTime);
-      endDateTime.setHours(hours + 1, minutes, 0, 0);
+      // 시작 시간과 종료 시간 계산
+      const startTime = formatToTimeString(date, timeSlot);
+      const [hours] = timeSlot.split(':').map(Number);
+      const endTime = formatToTimeString(date, `${hours + 1}:00`);
 
       const response = await fetch('/api/reservation/create', {
         method: 'POST',
@@ -87,8 +94,8 @@ export default function Component() {
         },
         body: JSON.stringify({
           roomId: selectedRoom,
-          startTime: startDateTime.toISOString(),
-          endTime: endDateTime.toISOString(),
+          startTime,  // YYYYMMDDHHMM 형식 (예: "202403150900")
+          endTime,    // YYYYMMDDHHMM 형식 (예: "202403151000")
           userName,
           content: "토론방 예약",
           status: 1,
@@ -97,17 +104,14 @@ export default function Component() {
       });
 
       if (response.ok) {
-        // 예약 성공 처리
         console.log(`Room ${selectedRoom} reserved for ${date?.toLocaleDateString()} at ${timeSlot} by ${userName}`);
       } else {
-        // 에러 처리
         console.error('Reservation failed');
       }
     } catch (error) {
       console.error('Error:', error);
     }
     
-    // 예약 완료 후 상태 초기화
     setSelectedRoom(null);
     setUserName("");
   };

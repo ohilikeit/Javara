@@ -1,19 +1,9 @@
 import { IReservationTool } from '../interfaces/IReservationTool';
 import { DateParsingTool } from './DateParsingTool';
-import { ReservationValidator } from '../../validators/ReservationValidator';
+import { ReservationValidator } from '../validators/ReservationValidator';
 import { logger } from '@/utils/logger';
 
-interface CreateReservationParams {
-  date: Date;
-  startTime: string;
-  duration: number;
-  roomId: number;
-  userName: string;
-  content: string;
-}
-
 export class SQLiteReservationTool implements IReservationTool {
-  private activeReservations = new Map<string, boolean>();
 
   constructor() {
     logger.log('SQLiteReservationTool initialized');
@@ -61,14 +51,26 @@ export class SQLiteReservationTool implements IReservationTool {
     try {
       logger.log('createReservation 호출됨:', info);
 
-      // 날짜 처리
-      const startDateTime = new Date(info.date);
-      const [hours, minutes] = info.startTime.split(':').map(Number);
-      startDateTime.setHours(hours, minutes || 0, 0, 0);
+      // 날짜와 시간을 YYYYMMDDHHMM 형식으로 변환
+      const formatTimeString = (date: Date | string, time: string) => {
+        const targetDate = typeof date === 'string' ? new Date(date) : date;
+        const [hours, minutes] = time.split(':').map(Number);
+        
+        return `${targetDate.getFullYear()}${
+          String(targetDate.getMonth() + 1).padStart(2, '0')}${
+          String(targetDate.getDate()).padStart(2, '0')}${
+          String(hours).padStart(2, '0')}${
+          String(minutes).padStart(2, '0')}`;
+      };
 
-      // 종료 시간 계산
-      const endDateTime = new Date(startDateTime);
-      endDateTime.setHours(startDateTime.getHours() + info.duration);
+      // 시작 시간 변환
+      const formattedStartTime = formatTimeString(info.date, info.startTime);
+      
+      // 종료 시간 계산 및 변환
+      const endDate = new Date(typeof info.date === 'string' ? info.date : info.date);
+      const [startHour] = info.startTime.split(':').map(Number);
+      const endHour = startHour + info.duration;
+      const formattedEndTime = formatTimeString(endDate, `${endHour}:00`);
 
       const response = await fetch('/api/reservation/create', {
         method: 'POST',
@@ -76,10 +78,10 @@ export class SQLiteReservationTool implements IReservationTool {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          startTime: startDateTime.toISOString(),
-          endTime: endDateTime.toISOString(),
+          startTime: formattedStartTime,
+          endTime: formattedEndTime,
           roomId: info.roomId,
-          userId: 1,  // 하드코딩
+          userId: 1,
           userName: info.userName,
           content: info.content,
           status: 1
