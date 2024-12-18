@@ -128,7 +128,7 @@ export default function Component() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f5f7fa] to-[#eef2f7]">
       <div className="container mx-auto p-6">
-        <div className="mb-8 rounded-2xl bg-white/80 backdrop-blur-sm p-6 shadow-lg ring-1 ring-black/5">
+        <div className="mb-8 rounded-2xl bg-white/80 backdrop-blur-sm p-6 shadow-lg ring-1 ring-black/5 w-2/3 mx-auto">
           <div className="grid gap-4 md:grid-cols-3">
             <Popover>
               <PopoverTrigger asChild>
@@ -166,22 +166,21 @@ export default function Component() {
                 <SelectItem value="16:00">17:00 - 18:00</SelectItem>
               </SelectContent>
             </Select>
-
             <Button
               onClick={handleSearch}
-              className="bg-[#3b547b] text-white hover:bg-[#4a6491] transition-colors shadow-md"
+              className="bg-[#4589c8] text-white hover:bg-[#69a3d8] transition-colors shadow-md"
             >
               <Search className="mr-2 h-4 w-4" />
               검색
             </Button>
           </div>
         </div>
-        <div className="container mx-auto rounded-2xl shadow-lg">
-          <div className="mb-8 rounded-2xl border border-[#3b547b]/20 bg-white/80 backdrop-blur-sm aspect-[2/1] w-full" onMouseMove={handleMouseMove}>
+        <div className="container mx-auto">
+          <div className="mb-8 rounded-2xl border border-[#4589c8]/20 bg-white/80 backdrop-blur-sm aspect-[2/1] w-2/3 mx-auto" onMouseMove={handleMouseMove}>
             {/* Rooms */}
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
-                <Room number={1} available onClick={() => handleRoomClick(1)} className="absolute left-[12%] top-[2%] h-[30%] w-[15%]" />
+                <Room number={1} available onClick={() => handleRoomClick(1)} className="absolute left-[10%] top-[5%] h-[25%] w-[16%]" />
               </HoverCardTrigger>
               <HoverCardContent 
                 className="w-80"
@@ -195,12 +194,12 @@ export default function Component() {
               </HoverCardContent>
             </HoverCard>
 
-            <Room number={2} disabled className="absolute left-[25%] top-[2%] h-[30%] w-[15%]" />
-            <Room number={3} disabled className="absolute left-[40%] top-[2%] h-[30%] w-[15%]" />
+            <Room number={2} disabled className="absolute left-[27%] top-[5%] h-[25%] w-[16%]" />
+            <Room number={3} disabled className="absolute left-[44%] top-[5%] h-[25%] w-[16%]" />
 
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
-                <Room number={4} available onClick={() => handleRoomClick(4)} className="absolute left-[55%] top-[2%] h-[30%] w-[15%]" />
+                <Room number={4} available onClick={() => handleRoomClick(4)} className="absolute left-[61%] top-[5%] h-[25%] w-[16%]" />
               </HoverCardTrigger>
               <HoverCardContent 
                 className="w-80"
@@ -216,7 +215,7 @@ export default function Component() {
 
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
-                <Room number={5} available onClick={() => handleRoomClick(5)} className="absolute left-[70%] top-[2%] h-[30%] w-[15%]" />
+                <Room number={5} available onClick={() => handleRoomClick(5)} className="absolute left-[78%] top-[5%] h-[25%] w-[16%]" />
               </HoverCardTrigger>
               <HoverCardContent 
                 className="w-80"
@@ -232,7 +231,7 @@ export default function Component() {
 
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
-                <Room number={6} available onClick={() => handleRoomClick(6)} className="absolute bottom-[2%] right-[2%] h-[50%] w-[20%]" />
+                <Room number={6} available onClick={() => handleRoomClick(6)} className="absolute bottom-[10%] right-[5%] h-[50%] w-[20%]" />
               </HoverCardTrigger>
               <HoverCardContent 
                 className="w-80"
@@ -245,26 +244,21 @@ export default function Component() {
                 <TimeTable roomNumber={6} />
               </HoverCardContent>
             </HoverCard>
-
-            {/* Other Elements */}
-            <div className="absolute bottom-[40%] left-[45%] text-sm text-[#3b547b] text-center">
-              더블어숲
+            <div className="absolute bottom-[40%] left-[35%] text-2xl text-[#4589c8] text-center font-semibold tracking-wide">
+              더불어숲
             </div>
-            <div className="absolute right-[2%] top-[2%] text-sm text-[#3b547b] text-center">
-              계단
-            </div>
-            <div className="absolute bottom-[50%] left-[5%] text-sm text-[#3b547b] text-center">
+            <div className="absolute bottom-[40%] left-[5%] text-lg text-[#4589c8] text-center font-semibold">
               앞문
             </div>
             <Dialog>
               <DialogTrigger asChild>
                 <Button
                   variant="outline"
-                  size="icon"
-                  className="absolute bottom-[20%] left-[5%] bg-[#3b547b] text-white hover:bg-[#3b547b]/90"
+                  size="lg"
+                  className="absolute bottom-[23%] left-[13%] bg-[#F6B352] text-white hover:bg-[#FFD699] transition-all shadow-md w-12 h-12 rounded-full"
                   aria-label="모든 토론방 예약 현황"
                 >
-                  <Clock className="h-4 w-4" />
+                  <Clock className="h-8 w-8" />
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-4xl">
@@ -281,11 +275,11 @@ export default function Component() {
               <DialogTrigger asChild>
                 <Button
                   variant="outline"
-                  size="icon"
-                  className="absolute bottom-[10%] left-[5%] bg-[#3b547b] text-white hover:bg-[#3b547b]/90"
+                  size="lg"
+                  className="absolute bottom-[13%] left-[13%] bg-[#F6B352] text-white hover:bg-[#FFD699] transition-all shadow-md w-12 h-12 rounded-full"
                   aria-label="채팅"
                 >
-                  <MessageCircle className="h-4 w-4" />
+                  <MessageCircle className="h-8 w-8" />
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[1000px]">
@@ -433,16 +427,20 @@ function Room({
       className={`border rounded-xl text-center text-sm flex items-center justify-center transition-all duration-200 ${className}
         ${
           disabled
-            ? "border-slate-200 bg-slate-50 text-slate-400"
+            ? "border-slate-200 bg-slate-50/80 text-slate-400"
             : available
-            ? "border-[#3b547b]/20 bg-[#3b547b] text-white cursor-pointer hover:bg-[#4a6491] shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-            : "border-[#3b547b]/20 bg-white text-[#3b547b] hover:bg-[#3b547b]/5"
+            ? "border-[#4589c8]/20 bg-[#4589c8] text-white cursor-pointer hover:bg-[#69a3d8] shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+            : "border-[#4589c8]/20 bg-white text-[#4589c8] hover:bg-[#4589c8]/5"
         }
       `}
     >
-      <div className="flex flex-col items-center gap-1">
-        <span className="font-medium">토론방 {number}</span>
-        {available && <span className="text-xs opacity-80">예약가능</span>}
+      <div className="flex flex-col items-center gap-2">
+        <span className="font-semibold text-base">토론방 {number}</span>
+        {available && (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-white/20">
+            예약가능
+          </span>
+        )}
       </div>
     </div>
   )
