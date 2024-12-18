@@ -4,25 +4,15 @@ import { logger } from '@/utils/logger';
 
 const prisma = new PrismaClient();
 
-interface CreateReservationRequest {
-  startTime: string;
-  endTime: string;
-  roomId: number;
-  userId: number;
-  userName: string;
-  content: string;
-  status: number;
-}
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
   try {
-    const { startTime, endTime, roomId, userId, userName, content, status } = req.body as CreateReservationRequest;
+    const { startTime, endTime, roomId, userId, userName, content, status } = req.body;
 
-    // 중복 예약 확인
+    // 중복 예약 확인 - String 타입으로 비교
     const existingReservation = await prisma.reservation.findFirst({
       where: {
         AND: [
@@ -32,14 +22,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             OR: [
               {
                 AND: [
-                  { startTime: { lte: new Date(startTime) } },
-                  { endTime: { gt: new Date(startTime) } }
+                  { startTime: { lte: startTime } },
+                  { endTime: { gt: startTime } }
                 ]
               },
               {
                 AND: [
-                  { startTime: { lt: new Date(endTime) } },
-                  { endTime: { gte: new Date(endTime) } }
+                  { startTime: { lt: endTime } },
+                  { endTime: { gte: endTime } }
                 ]
               }
             ]
@@ -55,11 +45,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    // 예약 생성
+    // 예약 생성 - String 타입으로 저장
     const reservation = await prisma.reservation.create({
       data: {
-        startTime: new Date(startTime),
-        endTime: new Date(endTime),
+        startTime,  // 이미 YYYYMMDDHHMM 형식의 문자열
+        endTime,    // 이미 YYYYMMDDHHMM 형식의 문자열
         userName,
         content: content || "토론방 예약",
         status: 1,

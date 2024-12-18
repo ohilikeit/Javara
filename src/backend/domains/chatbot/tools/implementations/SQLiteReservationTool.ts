@@ -1,21 +1,12 @@
 import { IReservationTool } from '../interfaces/IReservationTool';
 import { DateParsingTool } from './DateParsingTool';
+
 import { logger } from '@/utils/logger';
 import { format } from 'date-fns';
 import { DateUtils } from '../../utils/dateUtils';
 import { ReservationValidator } from '../validators/ReservationValidator';
 
-interface CreateReservationParams {
-  date: Date;
-  startTime: string;
-  duration: number;
-  roomId: number;
-  userName: string;
-  content: string;
-}
-
 export class SQLiteReservationTool implements IReservationTool {
-  private activeReservations = new Map<string, boolean>();
 
   constructor() {
     logger.log('SQLiteReservationTool initialized');
@@ -63,6 +54,7 @@ export class SQLiteReservationTool implements IReservationTool {
       logger.log('createReservation 호출됨:', info);
 
       // 날짜와 시간을 YYYYMMDDHHMM 형식으로 변환
+
       const reservationStartTime = DateUtils.toReservationDateTime(info.date.toISOString().split('T')[0], info.startTime);
       const reservationEndTime = DateUtils.calculateEndTime(reservationStartTime, info.duration);
 
@@ -70,6 +62,7 @@ export class SQLiteReservationTool implements IReservationTool {
         startTime: reservationStartTime,
         endTime: reservationEndTime
       });
+
 
       const response = await fetch('/api/reservation/create', {
         method: 'POST',
@@ -80,7 +73,7 @@ export class SQLiteReservationTool implements IReservationTool {
           startTime: reservationStartTime,
           endTime: reservationEndTime,
           roomId: info.roomId,
-          userId: 1,  // 하드코딩
+          userId: 1,
           userName: info.userName,
           content: info.content,
           status: 1
