@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { logger } from '@/utils/logger';
+import { DateUtils } from '@/backend/domains/chatbot/utils/dateUtils';
 
 const prisma = new PrismaClient();
 
@@ -13,16 +14,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { date, startTime, roomId } = req.body;
     logger.log('가용성 확인 요청:', { date, startTime, roomId });
 
-    const targetDate = new Date(date);
-    const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
+    // date는 YYYY-MM-DD 형식의 문자열로 가정
+    const reservationStartTime = DateUtils.toReservationDateTime(date, startTime);
 
     // 해당 날짜의 모든 예약 조회
     const existingReservations = await prisma.reservation.findMany({
       where: {
         startTime: {
-          gte: startOfDay,
-          lte: endOfDay,
+          gte: reservationStartTime,
+          lte: reservationStartTime,
         },
         ...(roomId ? { roomId: Number(roomId) } : {}),
         status: 1, // 활성 예약만 조회
@@ -35,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     // 가능한 시간대 계산
-    const availableSlots = calculateAvailableSlots(existingReservations, targetDate);
+    const availableSlots = calculateAvailableSlots(existingReservations, new Date(date));
 
     return res.status(200).json({
       success: true,
@@ -88,4 +88,4 @@ function calculateAvailableSlots(existingReservations: any[], date: Date) {
   }
 
   return availableSlots;
-} 
+}

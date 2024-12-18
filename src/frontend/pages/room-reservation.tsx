@@ -42,6 +42,7 @@ import {
   DialogTrigger,
 } from "../components/ui/dialog"
 import { ChatInterface } from "../components/chat/ChatInterface"
+import { Input } from "../components/ui/input"
 
 export default function Component() {
   const [date, setDate] = React.useState<Date>()
@@ -53,6 +54,7 @@ export default function Component() {
     content: string;
     isBot: boolean;
   }>>([]);
+  const [userName, setUserName] = useState<string>("");
 
   const today = new Date()
   const days = ['일', '월', '화', '수', '목', '금', '토']
@@ -65,25 +67,74 @@ export default function Component() {
     setSelectedRoom(roomNumber)
   }
 
-  const handleReservation = () => {
-    console.log(`Room ${selectedRoom} reserved for ${date?.toLocaleDateString()} at ${timeSlot}`)
-    setSelectedRoom(null)
-  }
+  const handleReservation = async () => {
+    try {
+      if (!date || !timeSlot) {
+        throw new Error('날짜와 시간을 선택해주세요');
+      }
+
+      // YYYYMMDDHHMM 형식으로 변환
+      const formatToTimeString = (date: Date, timeStr: string): string => {
+        const [hours] = timeStr.split(':').map(Number);
+        return `${date.getFullYear()}${
+          String(date.getMonth() + 1).padStart(2, '0')}${
+          String(date.getDate()).padStart(2, '0')}${
+          String(hours).padStart(2, '0')}00`;
+      };
+
+      // 시작 시간과 종료 시간 계산
+      const startTime = formatToTimeString(date, timeSlot);
+      const [hours] = timeSlot.split(':').map(Number);
+      const endTime = formatToTimeString(date, `${hours + 1}:00`);
+
+      const response = await fetch('/api/reservation/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          roomId: selectedRoom,
+          startTime,  // YYYYMMDDHHMM 형식 (예: "202403150900")
+          endTime,    // YYYYMMDDHHMM 형식 (예: "202403151000")
+          userName,
+          content: "토론방 예약",
+          status: 1,
+          userId: 1
+        }),
+      });
+
+      if (response.ok) {
+        console.log(`Room ${selectedRoom} reserved for ${date?.toLocaleDateString()} at ${timeSlot} by ${userName}`);
+      } else {
+        console.error('Reservation failed');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+    
+    setSelectedRoom(null);
+    setUserName("");
+  };
+
+  const handleDialogClose = () => {
+    setSelectedRoom(null);
+    setUserName("");
+  };
 
   const handleMouseMove = (event: React.MouseEvent) => {
     setMousePosition({ x: event.clientX, y: event.clientY })
   }
 
   return (
-    <div className="min-h-screen bg-[#3b547b]/5">
+    <div className="min-h-screen bg-gradient-to-br from-[#f5f7fa] to-[#eef2f7]">
       <div className="container mx-auto p-6">
-        <div className="mb-8 rounded-lg bg-white p-4 shadow-md">
+        <div className="mb-8 rounded-2xl bg-white/80 backdrop-blur-sm p-6 shadow-lg ring-1 ring-black/5 w-2/3 mx-auto">
           <div className="grid gap-4 md:grid-cols-3">
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="w-full justify-center text-center font-normal"
+                  className="w-full justify-center text-center font-medium transition-all hover:bg-slate-100 hover:border-slate-300"
                 >
                   <Calendar className="mr-2 h-4 w-4" />
                   {date ? date.toLocaleDateString() : "날짜 선택"}
@@ -95,15 +146,16 @@ export default function Component() {
                   selected={date}
                   onSelect={setDate}
                   initialFocus
+                  className="rounded-lg border shadow-lg"
                 />
               </PopoverContent>
             </Popover>
 
             <Select value={timeSlot} onValueChange={setTimeSlot}>
-              <SelectTrigger className="text-center">
+              <SelectTrigger className="text-center transition-all hover:bg-slate-100 hover:border-slate-300">
                 <SelectValue placeholder="시간대 선택" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-lg border shadow-lg">
                 <SelectItem value="09:00">09:00 - 10:00</SelectItem>
                 <SelectItem value="10:00">10:00 - 11:00</SelectItem>
                 <SelectItem value="11:00">11:00 - 12:00</SelectItem>
@@ -111,51 +163,50 @@ export default function Component() {
                 <SelectItem value="14:00">14:00 - 15:00</SelectItem>
                 <SelectItem value="15:00">15:00 - 16:00</SelectItem>
                 <SelectItem value="16:00">16:00 - 17:00</SelectItem>
+                <SelectItem value="16:00">17:00 - 18:00</SelectItem>
               </SelectContent>
             </Select>
-
             <Button
               onClick={handleSearch}
-              className="bg-[#3b547b] text-white hover:bg-[#3b547b]/90"
+              className="bg-[#4589c8] text-white hover:bg-[#69a3d8] transition-colors shadow-md"
             >
               <Search className="mr-2 h-4 w-4" />
               검색
             </Button>
           </div>
         </div>
-
-        <div className="relative mx-auto max-w-4xl rounded-lg border-2 border-[#3b547b] p-4">
-          <div className="aspect-[2/1] w-full" onMouseMove={handleMouseMove}>
+        <div className="container mx-auto">
+          <div className="mb-8 rounded-2xl border border-[#4589c8]/20 bg-white/80 backdrop-blur-sm aspect-[2/1] w-2/3 mx-auto" onMouseMove={handleMouseMove}>
             {/* Rooms */}
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
-                <Room number={1} available onClick={() => handleRoomClick(1)} className="absolute left-[12%] top-[2%] h-[30%] w-[15%]" />
+                <Room number={1} available onClick={() => handleRoomClick(1)} className="absolute left-[10%] top-[5%] h-[25%] w-[16%]" />
               </HoverCardTrigger>
               <HoverCardContent 
                 className="w-80"
                 style={{
                   position: 'fixed',
-                  left: `${mousePosition.x - 510}px`,
-                  top: `${mousePosition.y - 150}px`,
+                  left: `${mousePosition.x - 400}px`,
+                  top: `${mousePosition.y - 400}px`,
                 }}
               >
                 <TimeTable roomNumber={1} />
               </HoverCardContent>
             </HoverCard>
 
-            <Room number={2} disabled className="absolute left-[25%] top-[2%] h-[30%] w-[15%]" />
-            <Room number={3} disabled className="absolute left-[40%] top-[2%] h-[30%] w-[15%]" />
+            <Room number={2} disabled className="absolute left-[27%] top-[5%] h-[25%] w-[16%]" />
+            <Room number={3} disabled className="absolute left-[44%] top-[5%] h-[25%] w-[16%]" />
 
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
-                <Room number={4} available onClick={() => handleRoomClick(4)} className="absolute left-[55%] top-[2%] h-[30%] w-[15%]" />
+                <Room number={4} available onClick={() => handleRoomClick(4)} className="absolute left-[61%] top-[5%] h-[25%] w-[16%]" />
               </HoverCardTrigger>
               <HoverCardContent 
                 className="w-80"
                 style={{
                   position: 'fixed',         
-                  left: `${mousePosition.x - 510}px`,
-                  top: `${mousePosition.y - 150}px`,
+                  left: `${mousePosition.x - 400}px`,
+                  top: `${mousePosition.y - 400}px`,
                 }}
               >
                 <TimeTable roomNumber={4} />
@@ -164,14 +215,14 @@ export default function Component() {
 
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
-                <Room number={5} available onClick={() => handleRoomClick(5)} className="absolute left-[70%] top-[2%] h-[30%] w-[15%]" />
+                <Room number={5} available onClick={() => handleRoomClick(5)} className="absolute left-[78%] top-[5%] h-[25%] w-[16%]" />
               </HoverCardTrigger>
               <HoverCardContent 
                 className="w-80"
                 style={{
                   position: 'fixed',
-                  left: `${mousePosition.x - 510}px`,
-                  top: `${mousePosition.y - 150}px`,
+                  left: `${mousePosition.x - 400}px`,
+                  top: `${mousePosition.y - 400}px`,
                 }}
               >
                 <TimeTable roomNumber={5} />
@@ -180,39 +231,34 @@ export default function Component() {
 
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
-                <Room number={6} available onClick={() => handleRoomClick(6)} className="absolute bottom-[2%] right-[2%] h-[50%] w-[20%]" />
+                <Room number={6} available onClick={() => handleRoomClick(6)} className="absolute bottom-[10%] right-[5%] h-[50%] w-[20%]" />
               </HoverCardTrigger>
               <HoverCardContent 
                 className="w-80"
                 style={{
                   position: 'fixed',
-                  left: `${mousePosition.x -510}px`,
-                  top: `${mousePosition.y -150}px`,
+                  left: `${mousePosition.x - 400}px`,
+                  top: `${mousePosition.y - 400}px`,
                 }}
               >
                 <TimeTable roomNumber={6} />
               </HoverCardContent>
             </HoverCard>
-
-            {/* Other Elements */}
-            <div className="absolute bottom-[40%] left-[45%] text-sm text-[#3b547b] text-center">
-              더블어숲
+            <div className="absolute bottom-[40%] left-[35%] text-2xl text-[#4589c8] text-center font-semibold tracking-wide">
+              더불어숲
             </div>
-            <div className="absolute right-[2%] top-[2%] text-sm text-[#3b547b] text-center">
-              계단
-            </div>
-            <div className="absolute bottom-[50%] left-[5%] text-sm text-[#3b547b] text-center">
+            <div className="absolute bottom-[40%] left-[5%] text-lg text-[#4589c8] text-center font-semibold">
               앞문
             </div>
             <Dialog>
               <DialogTrigger asChild>
                 <Button
                   variant="outline"
-                  size="icon"
-                  className="absolute bottom-[20%] left-[5%] bg-[#3b547b] text-white hover:bg-[#3b547b]/90"
+                  size="lg"
+                  className="absolute bottom-[23%] left-[13%] bg-[#F6B352] text-white hover:bg-[#FFD699] transition-all shadow-md w-12 h-12 rounded-full"
                   aria-label="모든 토론방 예약 현황"
                 >
-                  <Clock className="h-4 w-4" />
+                  <Clock className="h-8 w-8" />
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-4xl">
@@ -229,11 +275,11 @@ export default function Component() {
               <DialogTrigger asChild>
                 <Button
                   variant="outline"
-                  size="icon"
-                  className="absolute bottom-[10%] left-[5%] bg-[#3b547b] text-white hover:bg-[#3b547b]/90"
+                  size="lg"
+                  className="absolute bottom-[13%] left-[13%] bg-[#F6B352] text-white hover:bg-[#FFD699] transition-all shadow-md w-12 h-12 rounded-full"
                   aria-label="채팅"
                 >
-                  <MessageCircle className="h-4 w-4" />
+                  <MessageCircle className="h-8 w-8" />
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[1000px]">
@@ -249,20 +295,46 @@ export default function Component() {
           </div>
         </div>
 
-        <AlertDialog open={selectedRoom !== null} onOpenChange={() => setSelectedRoom(null)}>
+        <AlertDialog open={selectedRoom !== null} onOpenChange={handleDialogClose}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="text-center">토론방 {selectedRoom} 예약</AlertDialogTitle>
-              <AlertDialogDescription className="text-center">
-                {date && timeSlot
-                  ? `${date.toLocaleDateString()}에 ${timeSlot} 시간대로 토론방 ${selectedRoom}을 예약하시겠습니까?`
-                  : "날짜와 시간을 선택해주세요."}
+              <AlertDialogDescription className="space-y-4">
+                {(date instanceof Date) && timeSlot ? (
+                  <>
+                    <p className="text-center">
+                      {`${date.toLocaleDateString()}에 ${timeSlot} 시간대로 토론방 ${selectedRoom}을 예약하시겠습니까?`}
+                    </p>
+                    <div>
+                      <label htmlFor="userName" className="block text-sm font-medium text-gray-700">
+                        예약자 이름
+                      </label>
+                      <Input
+                        id="userName"
+                        type="text"
+                        value={userName}
+                        onChange={(e) => setUserName(e.target.value)}
+                        placeholder="이름을 입력해주세요"
+                        className="mt-1"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-red-500 text-center">날짜와 시간을 선택해주세요.</p>
+                )}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="flex justify-center">
-              <AlertDialogCancel>취소</AlertDialogCancel>
-              <AlertDialogAction onClick={handleReservation} disabled={!date || !timeSlot}>
-                예약
+              <AlertDialogCancel onClick={() => {
+                setUserName("");
+              }}>
+                취소
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleReservation}
+                disabled={!date || !timeSlot}
+              >
+                다음
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -278,7 +350,7 @@ function TimeTable({ roomNumber }: { roomNumber: number }) {
   const timeSlots = Array.from({ length: 9 }, (_, i) => `${i + 9}:00`)
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-md">
+    <div className="p-4 bg-white rounded-xl shadow-xl border border-[#3b547b]/10">
       <div className="mb-4 text-lg font-semibold text-[#3b547b] text-center">
         {`${today.getMonth() + 1}월 ${today.getDate()}일 (${days[today.getDay()]}) 토론방 ${roomNumber}`}
       </div>
@@ -286,12 +358,10 @@ function TimeTable({ roomNumber }: { roomNumber: number }) {
         {timeSlots.map((time) => (
           <div
             key={time}
-            className={`flex items-center justify-between rounded-md p-2 text-sm
-              ${'bg-[#3b547b] text-white'}
-            `}
+            className="flex items-center justify-between rounded-lg p-2 text-sm hover:bg-[#3b547b]/5 transition-colors"
           >
-            <span className="w-1/2 text-center">{time}</span>
-            <span className="w-1/2 text-center">
+            <span className="w-1/2 text-center font-medium text-[#3b547b]/80">{time}</span>
+            <span className="w-1/2 text-center text-[#3b547b]">
               예약가능
             </span>
           </div>
@@ -306,30 +376,30 @@ function AllRoomsTimetable() {
   const roomNumbers = [1, 4, 5, 6]
 
   return (
-    <div className="overflow-x-auto bg-white rounded-lg shadow-md p-4">
+    <div className="overflow-x-auto bg-white rounded-xl shadow-lg p-6">
       <table className="w-full border-collapse">
         <thead>
           <tr>
-            <th className="border-b-2 border-[#3b547b] p-2 text-center text-[#3b547b]">시간</th>
+            <th className="border-b-2 border-[#3b547b]/20 p-3 text-center text-[#3b547b] font-medium">시간</th>
             {roomNumbers.map(roomNumber => (
-              <th key={roomNumber} className="border-b-2 border-[#3b547b] p-2 text-center text-[#3b547b]">토론방 {roomNumber}</th>
+              <th key={roomNumber} className="border-b-2 border-[#3b547b]/20 p-3 text-center text-[#3b547b] font-medium">
+                토론방 {roomNumber}
+              </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {timeSlots.map(time => (
-            <tr key={time} className="hover:bg-gray-50">
-              <td className="border-b border-gray-200 p-2 text-center">{time}</td>
-              {roomNumbers.map(roomNumber => {
-                return (
-                  <td 
-                    key={`${roomNumber}-${time}`} 
-                    className={`border-b border-gray-200 p-2 text-center ${'text-[#3b547b]'}`}
-                  >
-                    예약가능
-                  </td>
-                );
-              })}
+            <tr key={time} className="hover:bg-[#3b547b]/5 transition-colors">
+              <td className="border-b border-[#3b547b]/10 p-3 text-center text-[#3b547b]/80">{time}</td>
+              {roomNumbers.map(roomNumber => (
+                <td 
+                  key={`${roomNumber}-${time}`} 
+                  className="border-b border-[#3b547b]/10 p-3 text-center text-[#3b547b]"
+                >
+                  예약가능
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>
@@ -354,17 +424,24 @@ function Room({
   return (
     <div
       onClick={available ? onClick : undefined}
-      className={`border-2 text-center text-sm flex items-center justify-center ${className}
+      className={`border rounded-xl text-center text-sm flex items-center justify-center transition-all duration-200 ${className}
         ${
           disabled
-            ? "border-gray-300 bg-gray-100 text-gray-500"
+            ? "border-slate-200 bg-slate-50/80 text-slate-400"
             : available
-            ? "border-[#3b547b] bg-[#3b547b] text-white cursor-pointer hover:bg-[#3b547b]/90"
-            : "border-[#3b547b]/20 bg-white text-[#3b547b]"
+            ? "border-[#4589c8]/20 bg-[#4589c8] text-white cursor-pointer hover:bg-[#69a3d8] shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+            : "border-[#4589c8]/20 bg-white text-[#4589c8] hover:bg-[#4589c8]/5"
         }
       `}
     >
-      토론방 {number}
+      <div className="flex flex-col items-center gap-2">
+        <span className="font-semibold text-base">토론방 {number}</span>
+        {available && (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-white/20">
+            예약가능
+          </span>
+        )}
+      </div>
     </div>
   )
 }
