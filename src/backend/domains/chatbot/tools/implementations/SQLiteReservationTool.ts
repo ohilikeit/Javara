@@ -1,7 +1,10 @@
 import { IReservationTool } from '../interfaces/IReservationTool';
 import { DateParsingTool } from './DateParsingTool';
-import { ReservationValidator } from '../validators/ReservationValidator';
+
 import { logger } from '@/utils/logger';
+import { format } from 'date-fns';
+import { DateUtils } from '../../utils/dateUtils';
+import { ReservationValidator } from '../validators/ReservationValidator';
 
 export class SQLiteReservationTool implements IReservationTool {
 
@@ -13,14 +16,20 @@ export class SQLiteReservationTool implements IReservationTool {
     try {
       logger.log('checkAvailability 호출:', { date, startTime, roomId });
 
+      // 날짜와 시간을 YYYYMMDDHHMM 형식으로 변환
+      const isoDate = format(date, 'yyyy-MM-dd');
+      const reservationStartTime = DateUtils.toReservationDateTime(
+        isoDate, 
+        startTime || '09:00'
+      );
+
       const response = await fetch('/api/reservation/check', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          date: date.toISOString(),
-          startTime,
+          startTime: reservationStartTime,
           roomId,
         }),
       });
@@ -40,37 +49,20 @@ export class SQLiteReservationTool implements IReservationTool {
     }
   }
 
-  async createReservation(info: {
-    date: string | Date;
-    startTime: string;
-    duration: number;
-    roomId: number;
-    userName: string;
-    content: string;
-  }): Promise<boolean> {
+  async createReservation(info: CreateReservationParams): Promise<boolean> {
     try {
       logger.log('createReservation 호출됨:', info);
 
       // 날짜와 시간을 YYYYMMDDHHMM 형식으로 변환
-      const formatTimeString = (date: Date | string, time: string) => {
-        const targetDate = typeof date === 'string' ? new Date(date) : date;
-        const [hours, minutes] = time.split(':').map(Number);
-        
-        return `${targetDate.getFullYear()}${
-          String(targetDate.getMonth() + 1).padStart(2, '0')}${
-          String(targetDate.getDate()).padStart(2, '0')}${
-          String(hours).padStart(2, '0')}${
-          String(minutes).padStart(2, '0')}`;
-      };
 
-      // 시작 시간 변환
-      const formattedStartTime = formatTimeString(info.date, info.startTime);
-      
-      // 종료 시간 계산 및 변환
-      const endDate = new Date(typeof info.date === 'string' ? info.date : info.date);
-      const [startHour] = info.startTime.split(':').map(Number);
-      const endHour = startHour + info.duration;
-      const formattedEndTime = formatTimeString(endDate, `${endHour}:00`);
+      const reservationStartTime = DateUtils.toReservationDateTime(info.date.toISOString().split('T')[0], info.startTime);
+      const reservationEndTime = DateUtils.calculateEndTime(reservationStartTime, info.duration);
+
+      logger.log('변환된 예약 시간:', {
+        startTime: reservationStartTime,
+        endTime: reservationEndTime
+      });
+
 
       const response = await fetch('/api/reservation/create', {
         method: 'POST',
@@ -78,8 +70,8 @@ export class SQLiteReservationTool implements IReservationTool {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          startTime: formattedStartTime,
-          endTime: formattedEndTime,
+          startTime: reservationStartTime,
+          endTime: reservationEndTime,
           roomId: info.roomId,
           userId: 1,
           userName: info.userName,
@@ -105,7 +97,7 @@ export class SQLiteReservationTool implements IReservationTool {
   async findNextAvailable(options: {
     timeRange: "morning" | "afternoon" | "all";
     preferredRoom?: number;
-    startFrom: Date | string;
+    startFrom: Date;
   }): Promise<{
     availableSlots: Array<{
       date: string;
@@ -113,39 +105,27 @@ export class SQLiteReservationTool implements IReservationTool {
       startTime: string;
       endTime: string;
     }>;
-    success?: boolean;
-    error?: string;
-    messageComponents?: any;
   }> {
     try {
-      const targetDate = typeof options.startFrom === 'string' 
-        ? await DateParsingTool.parseDateString(options.startFrom)
-        : options.startFrom;
+      const isoDate = format(options.startFrom, 'yyyy-MM-dd');
+      
+      // 시간대별 시작/종료 시간 설정
+      const timeRanges = {
+        morning: { start: '09:00', end: '12:00' },
+        afternoon: { start: '13:00', end: '18:00' },
+        all: { start: '09:00', end: '18:00' }
+      };
 
-      if (!targetDate) throw new Error("유효하지 않은 날짜입니다.");
+      const range = timeRanges[options.timeRange];
+      const startDateTime = DateUtils.toReservationDateTime(isoDate, range.start);
+      const endDateTime = DateUtils.toReservationDateTime(isoDate, range.end);
 
-      logger.log('findNextAvailable 요청:', {
-        targetDate,
-        timeRange: options.timeRange,
-        preferredRoom: options.preferredRoom
-      });
-
-      const validationError = ReservationValidator.validateDate(targetDate);
-      if (validationError) {
-        return {
-          availableSlots: [],
-          success: false,
-          error: validationError
-        };
-      }
-
-      // API 호출로 예약된 시간 확인
       const response = await fetch('/api/reservation/find-next', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          date: targetDate.toISOString(),
-          timeRange: options.timeRange,
+          startTime: startDateTime,
+          endTime: endDateTime,
           preferredRoom: options.preferredRoom
         })
       });
@@ -155,71 +135,11 @@ export class SQLiteReservationTool implements IReservationTool {
       }
 
       const result = await response.json();
-      logger.log('API 응답:', result);
-      
-      // 시간대별 기본 슬롯 생성
-      const timeRanges = {
-        morning: { start: 9, end: 12 },
-        afternoon: { start: 13, end: 18 },
-        all: { start: 9, end: 18 }
-      };
-      
-      const range = timeRanges[options.timeRange] || timeRanges.all;
-      const defaultSlots = [];
-      
-      // 모든 방에 대해 기본 시간 슬롯 생성
-      const rooms = [1, 4, 5, 6];
-      for (const roomId of rooms) {
-        if (options.preferredRoom && options.preferredRoom !== roomId) continue;
-        
-        for (let hour = range.start; hour < range.end; hour++) {
-          defaultSlots.push({
-            date: targetDate.toISOString().split('T')[0],
-            roomId,
-            startTime: `${hour.toString().padStart(2, '0')}:00`,
-            endTime: `${(hour + 1).toString().padStart(2, '0')}:00`
-          });
-        }
-      }
-
-      // result.data가 비어있거나 배열이 아닌 경우 처리
-      const reservedSlots = Array.isArray(result.data) ? result.data : [];
-      
-      // 예약된 시간이 없으면 모든 시간이 가능
-      if (reservedSlots.length === 0) {
-        logger.log('예약된 시간 없음, 모든 시간 사용 가능');
-        return {
-          availableSlots: defaultSlots,
-          success: true
-        };
-      }
-
-      // 예약된 시간을 제외한 가용 시간 계산
-      const availableSlots = defaultSlots.filter(slot => {
-        return !reservedSlots.some((reserved: any) => 
-          reserved.roomId === slot.roomId && 
-          reserved.startTime === slot.startTime
-        );
-      });
-
-      logger.log('가용 시간 계산 완료:', {
-        totalSlots: defaultSlots.length,
-        reservedSlots: reservedSlots.length,
-        availableSlots: availableSlots.length
-      });
-
-      return {
-        availableSlots,
-        success: true
-      };
+      return result.data;
 
     } catch (error) {
       logger.error('findNextAvailable 에러:', error);
-      return {
-        availableSlots: [],
-        success: false,
-        error: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
-      };
+      throw error;
     }
   }
 
