@@ -1,12 +1,16 @@
+import { Entity, PrimaryGeneratedColumn} from "typeorm";
+
+@Entity()
 export class ReservationEntity {
-    private readonly reservationId: number;
-    private readonly userId: number;
-    private readonly roomId: number; 
-    private readonly userName: string;   
-    private readonly startTime: string;
-    private readonly endTime: string;
-    private status: number;
-    private readonly regdate: Date;
+    @PrimaryGeneratedColumn()
+    public reservationId: number;
+    public userId: number;
+    public roomId: number; 
+    public userName: string;   
+    public startTime: string;
+    public endTime: string;
+    public status: number;
+    public regdate: Date;
 
     constructor(
         reservationId: number,

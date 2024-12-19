@@ -182,7 +182,7 @@ export default function Component() {
               <HoverCardTrigger>
                 <Room number={1} available onClick={() => handleRoomClick(1)} className="absolute left-[10%] top-[5%] h-[25%] w-[16%]" />
               </HoverCardTrigger>
-              <HoverCardContent 
+              {/* <HoverCardContent 
                 className="w-80"
                 style={{
                   position: 'fixed',
@@ -190,8 +190,7 @@ export default function Component() {
                   top: `${mousePosition.y - 400}px`,
                 }}
               >
-                <TimeTable roomNumber={1} />
-              </HoverCardContent>
+              </HoverCardContent> */}
             </HoverCard>
 
             <Room number={2} disabled className="absolute left-[27%] top-[5%] h-[25%] w-[16%]" />
@@ -201,48 +200,18 @@ export default function Component() {
               <HoverCardTrigger>
                 <Room number={4} available onClick={() => handleRoomClick(4)} className="absolute left-[61%] top-[5%] h-[25%] w-[16%]" />
               </HoverCardTrigger>
-              <HoverCardContent 
-                className="w-80"
-                style={{
-                  position: 'fixed',         
-                  left: `${mousePosition.x - 400}px`,
-                  top: `${mousePosition.y - 400}px`,
-                }}
-              >
-                <TimeTable roomNumber={4} />
-              </HoverCardContent>
             </HoverCard>
 
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
                 <Room number={5} available onClick={() => handleRoomClick(5)} className="absolute left-[78%] top-[5%] h-[25%] w-[16%]" />
               </HoverCardTrigger>
-              <HoverCardContent 
-                className="w-80"
-                style={{
-                  position: 'fixed',
-                  left: `${mousePosition.x - 400}px`,
-                  top: `${mousePosition.y - 400}px`,
-                }}
-              >
-                <TimeTable roomNumber={5} />
-              </HoverCardContent>
             </HoverCard>
 
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
                 <Room number={6} available onClick={() => handleRoomClick(6)} className="absolute bottom-[10%] right-[5%] h-[50%] w-[20%]" />
               </HoverCardTrigger>
-              <HoverCardContent 
-                className="w-80"
-                style={{
-                  position: 'fixed',
-                  left: `${mousePosition.x - 400}px`,
-                  top: `${mousePosition.y - 400}px`,
-                }}
-              >
-                <TimeTable roomNumber={6} />
-              </HoverCardContent>
             </HoverCard>
             <div className="absolute bottom-[40%] left-[35%] text-2xl text-[#4589c8] text-center font-semibold tracking-wide">
               더불어숲
@@ -339,33 +308,6 @@ export default function Component() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
-    </div>
-  )
-}
-
-function TimeTable({ roomNumber }: { roomNumber: number }) {
-  const today = new Date()
-  const days = ['일', '월', '화', '수', '목', '금', '토']
-  const timeSlots = Array.from({ length: 9 }, (_, i) => `${i + 9}:00`)
-
-  return (
-    <div className="p-4 bg-white rounded-xl shadow-xl border border-[#3b547b]/10">
-      <div className="mb-4 text-lg font-semibold text-[#3b547b] text-center">
-        {`${today.getMonth() + 1}월 ${today.getDate()}일 (${days[today.getDay()]}) 토론방 ${roomNumber}`}
-      </div>
-      <div className="space-y-2">
-        {timeSlots.map((time) => (
-          <div
-            key={time}
-            className="flex items-center justify-between rounded-lg p-2 text-sm hover:bg-[#3b547b]/5 transition-colors"
-          >
-            <span className="w-1/2 text-center font-medium text-[#3b547b]/80">{time}</span>
-            <span className="w-1/2 text-center text-[#3b547b]">
-              예약가능
-            </span>
-          </div>
-        ))}
       </div>
     </div>
   )
