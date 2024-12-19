@@ -27,7 +27,8 @@ export class ChatService {
   - 토론방 예약과 관련없는 질문에는 친절하게 토론방과 관련된 문의를 부탁드린다고 응답하고 원하는 정보를 유도해주세요.
   - 모든 필수 정보가 수집되면 예약 가능 여부를 확인하고 예약을 진행하세요.
   - 사용자의 의도를 파악하여 자연스럽게 대화를 이어가며 필요한 정보를 수집하세요.
-  - 방 번호는 1,4,5,6 중 하나 중 아무거나 상관없이 비어있다면 자유롭게 선택해주세요.`;
+  - 방 번호는 1,4,5,6 중 하나 중 아무거나 상관없이 비어있다면 자유롭게 선택해주세요.
+  - 예약할 날짜에 대한 구체적인 언급 보다는 사용자가 직접 날짜에 대한 언급을 할 때에만 답변으로 확인해주세요.`;
 
   constructor() {
     console.log('ChatService 초기화 시작');
@@ -157,7 +158,7 @@ export class ChatService {
       contextParts.push('현재까지 확인된 예약 정보:');
       if (info.date) contextParts.push(`- 날짜: ${info.date instanceof Date ? info.date.toLocaleDateString() : new Date(info.date).toLocaleDateString()}`);
       if (info.timeRange) contextParts.push(`- 시간대: ${info.timeRange}`);
-      if (info.startTime) contextParts.push(`- 시작 시간: ${info.startTime}`);
+      if (info.startTime) contextParts.push(`- ��작 시간: ${info.startTime}`);
       if (info.duration) contextParts.push(`- 사용 시간: ${info.duration}시간`);
       if (info.roomId) contextParts.push(`- 토론방: ${info.roomId}번`);
       if (info.userName) contextParts.push(`- 예약자: ${info.userName}`);
@@ -173,34 +174,6 @@ export class ChatService {
     contextParts.push('');
 
     return contextParts.join('\n');
-  }
-
-  private async parseReservationInfo(message: string, currentInfo: ReservationInfo): Promise<Partial<ReservationInfo>> {
-    try {
-      const parsedInfo: Partial<ReservationInfo> = {};
-      
-      // 날짜 파싱
-      const date = await DateParsingTool.parseDateString(message, 
-        "사용자의 메시지에서 토론방 예약을 위한 날짜 정보를 추출해주세요.");
-      
-      if (date) {
-        // 영업일 및 예약 기간 검증
-        if (!DateParsingTool.validateBusinessDay(date)) {
-          throw new Error("주말은 예약이 불가능합니다.");
-        }
-        if (!DateParsingTool.isWithinReservationPeriod(date)) {
-          throw new Error("예약은 오늘부터 2주 이내만 가능합니다.");
-        }
-        parsedInfo.date = date;
-      }
-
-      // 나머지 정보 파싱 ���직...
-      
-      return parsedInfo;
-    } catch (error) {
-      logger.log('예약 정보 파싱 실패:', error);
-      throw error;
-    }
   }
 
   private buildContextMessage(message: string, reservationInfo: ReservationInfo): string {

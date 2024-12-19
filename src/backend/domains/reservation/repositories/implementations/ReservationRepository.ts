@@ -28,8 +28,8 @@ export class ReservationRepository implements ReservationInterfaceRepository {
                 createdReservation.userId,
                 createdReservation.roomId,
                 createdReservation.userName,
-                createdReservation.startTime,
-                createdReservation.endTime,
+                createdReservation.startTime.toString(),
+                createdReservation.endTime.toString(),
                 createdReservation.status,
                 createdReservation.createdAt
             );

@@ -3,8 +3,9 @@ import { ReservationEntity } from '../entity/ReservationEntity';
 export interface CreateReservationDTO {
     userId: number;
     roomId: number;
-    startTime: Date;
-    endTime: Date;
+    userName: string;
+    startTime: string;
+    endTime: string;
     status: number;
 }
 
