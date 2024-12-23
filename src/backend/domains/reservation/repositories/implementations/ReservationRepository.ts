@@ -1,7 +1,9 @@
+import { Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { ReservationEntity } from '../../entity/ReservationEntity';
 import { ReservationInterfaceRepository } from '../interfaces/ReservationInterfaceRepository';
 
+@Injectable()
 export class ReservationRepository implements ReservationInterfaceRepository {
     private prisma: PrismaClient;
 
@@ -35,6 +37,58 @@ export class ReservationRepository implements ReservationInterfaceRepository {
             );
         } catch (error) {
             throw new Error(`Failed to create reservation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    async getTodayReservations(): Promise<ReservationEntity[]> {
+        const today = new Date();
+        const formattedDate = today.toISOString().split('T')[0].replace(/-/g, '');
+        console.log(formattedDate);
+        try {
+            const reservations = await this.prisma.reservation.findMany({
+                where: {
+                    startTime: {
+                        startsWith: formattedDate,
+                    },
+                },
+            });
+
+            return reservations.map(reservation => new ReservationEntity(
+                reservation.id,
+                reservation.userId,
+                reservation.roomId,
+                reservation.userName,
+                reservation.startTime,
+                reservation.endTime,
+                reservation.status,
+                reservation.createdAt
+            ));
+        } catch (error) {
+            throw new Error(`Failed to fetch today's reservations: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    async getReservationsByTime(startTime: string): Promise<ReservationEntity[]> {
+        try {
+            const reservations = await this.prisma.reservation.findMany({
+                where: {
+                    startTime: startTime,
+                    status: 1  // 활성 예약만 조회
+                }
+            });
+
+            return reservations.map(reservation => new ReservationEntity(
+                reservation.id,
+                reservation.userId,
+                reservation.roomId,
+                reservation.userName,
+                reservation.startTime,
+                reservation.endTime,
+                reservation.status,
+                reservation.createdAt
+            ));
+        } catch (error) {
+            throw new Error(`Failed to fetch reservations by time: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 }
