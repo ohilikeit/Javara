@@ -22,7 +22,9 @@
       "@/*": ["./src/*"]
     },
     "target": "es2017",
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "prisma/**/*"],
   "exclude": ["node_modules", "src/lib/prisma/**/*"]
