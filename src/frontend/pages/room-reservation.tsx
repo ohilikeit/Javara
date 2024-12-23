@@ -165,6 +165,7 @@ export default function Component() {
                 <SelectItem value="14:00">14:00 - 15:00</SelectItem>
                 <SelectItem value="15:00">15:00 - 16:00</SelectItem>
                 <SelectItem value="16:00">16:00 - 17:00</SelectItem>
+                <SelectItem value="17:00">17:00 - 18:00</SelectItem>
               </SelectContent>
             </Select>
             <Button
@@ -277,7 +278,7 @@ export default function Component() {
                     </p>
                     <div>
                       <label htmlFor="userName" className="block text-sm font-medium text-gray-700">
-                        예약자 이름
+                        예약자 이���
                       </label>
                       <Input
                         id="userName"
