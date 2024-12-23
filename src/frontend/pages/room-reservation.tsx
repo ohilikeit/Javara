@@ -318,7 +318,7 @@ function AllRoomsTimetable() {
 
   useEffect(() => {
     const fetchReservations = async () => {
-      const response = await fetch('/api/reservations');
+      const response = await fetch('http://localhost:3300/reservations/today');
       if (response.ok) {
         const data = await response.json();
         setReservations(data);
