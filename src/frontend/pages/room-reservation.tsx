@@ -56,14 +56,38 @@ export default function Component() {
     isBot: boolean;
   }>>([]);
   const [userName, setUserName] = useState<string>("");
-  const [reservations, setReservations] = useState<ReservationEntity[]>([]);
+  const [availableRooms, setAvailableRooms] = useState<number[]>([]);
 
   const today = new Date()
   const days = ['일', '월', '화', '수', '목', '금', '토']
 
-  const handleSearch = () => {
-    console.log("Searching for:", { date, timeSlot })
-  }
+  const handleSearch = async () => {
+    try {
+      if (!date || !timeSlot) {
+        return;
+      }
+
+      const formatToTimeString = (date: Date, timeStr: string): string => {
+        const [hours] = timeStr.split(':').map(Number);
+        return `${date.getFullYear()}${
+          String(date.getMonth() + 1).padStart(2, '0')}${
+          String(date.getDate()).padStart(2, '0')}${
+          String(hours).padStart(2, '0')}00`;
+      };
+
+      const startTime = formatToTimeString(date, timeSlot);
+      
+      const response = await fetch(`http://localhost:3300/reservations/available?startTime=${startTime}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch available rooms');
+      }
+      
+      const data = await response.json();
+      setAvailableRooms(data);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
 
   const handleRoomClick = (roomNumber: number) => {
     setSelectedRoom(roomNumber)
@@ -182,37 +206,60 @@ export default function Component() {
             {/* Rooms */}
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
-                <Room number={1} available onClick={() => handleRoomClick(1)} className="absolute left-[10%] top-[5%] h-[25%] w-[16%]" />
-              </HoverCardTrigger>
-              {/* <HoverCardContent 
-                className="w-80"
-                style={{
-                  position: 'fixed',
-                  left: `${mousePosition.x - 400}px`,
-                  top: `${mousePosition.y - 400}px`,
-                }}
-              >
-              </HoverCardContent> */}
-            </HoverCard>
-
-            <Room number={2} disabled className="absolute left-[27%] top-[5%] h-[25%] w-[16%]" />
-            <Room number={3} disabled className="absolute left-[44%] top-[5%] h-[25%] w-[16%]" />
-
-            <HoverCard openDelay={0} closeDelay={0}>
-              <HoverCardTrigger>
-                <Room number={4} available onClick={() => handleRoomClick(4)} className="absolute left-[61%] top-[5%] h-[25%] w-[16%]" />
+                <Room 
+                  number={1} 
+                  disabled={!availableRooms.includes(1)} 
+                  available={availableRooms.includes(1)} 
+                  onClick={() => handleRoomClick(1)} 
+                  className="absolute left-[10%] top-[5%] h-[25%] w-[16%]" 
+                />
               </HoverCardTrigger>
             </HoverCard>
 
+            <Room 
+              number={2} 
+              disabled={true} 
+              className="absolute left-[27%] top-[5%] h-[25%] w-[16%]" 
+            />
+            <Room 
+              number={3} 
+              disabled={true} 
+              className="absolute left-[44%] top-[5%] h-[25%] w-[16%]" 
+            />
+
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
-                <Room number={5} available onClick={() => handleRoomClick(5)} className="absolute left-[78%] top-[5%] h-[25%] w-[16%]" />
+                <Room 
+                  number={4} 
+                  disabled={!availableRooms.includes(4)} 
+                  available={availableRooms.includes(4)} 
+                  onClick={() => handleRoomClick(4)} 
+                  className="absolute left-[61%] top-[5%] h-[25%] w-[16%]" 
+                />
               </HoverCardTrigger>
             </HoverCard>
 
             <HoverCard openDelay={0} closeDelay={0}>
               <HoverCardTrigger>
-                <Room number={6} available onClick={() => handleRoomClick(6)} className="absolute bottom-[10%] right-[5%] h-[50%] w-[20%]" />
+                <Room 
+                  number={5} 
+                  disabled={!availableRooms.includes(5)} 
+                  available={availableRooms.includes(5)} 
+                  onClick={() => handleRoomClick(5)} 
+                  className="absolute left-[78%] top-[5%] h-[25%] w-[16%]" 
+                />
+              </HoverCardTrigger>
+            </HoverCard>
+
+            <HoverCard openDelay={0} closeDelay={0}>
+              <HoverCardTrigger>
+                <Room 
+                  number={6} 
+                  disabled={!availableRooms.includes(6)} 
+                  available={availableRooms.includes(6)} 
+                  onClick={() => handleRoomClick(6)} 
+                  className="absolute bottom-[10%] right-[5%] h-[50%] w-[20%]" 
+                />
               </HoverCardTrigger>
             </HoverCard>
             <div className="absolute bottom-[40%] left-[35%] text-2xl text-[#4589c8] text-center font-semibold tracking-wide">
@@ -278,7 +325,7 @@ export default function Component() {
                     </p>
                     <div>
                       <label htmlFor="userName" className="block text-sm font-medium text-gray-700">
-                        예약자 이���
+                        예약자 성함
                       </label>
                       <Input
                         id="userName"
@@ -392,7 +439,7 @@ function Room({
       className={`border rounded-xl text-center text-sm flex items-center justify-center transition-all duration-200 ${className}
         ${
           disabled
-            ? "border-slate-200 bg-slate-50/80 text-slate-400"
+            ? "border-slate-200 bg-slate-50/80 text-slate-400 cursor-not-allowed"
             : available
             ? "border-[#4589c8]/20 bg-[#4589c8] text-white cursor-pointer hover:bg-[#69a3d8] shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
             : "border-[#4589c8]/20 bg-white text-[#4589c8] hover:bg-[#4589c8]/5"
@@ -401,11 +448,9 @@ function Room({
     >
       <div className="flex flex-col items-center gap-2">
         <span className="font-semibold text-base">토론방 {number}</span>
-        {available && (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-white/20">
-            예약가능
-          </span>
-        )}
+        <span className="text-xs px-2 py-0.5 rounded-full bg-white/20">
+          {disabled ? "예약 불가" : "예약가능"}
+        </span>
       </div>
     </div>
   )
