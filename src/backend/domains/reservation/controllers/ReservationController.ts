@@ -8,7 +8,7 @@ export class ReservationController {
     private readonly reservationService: ReservationService
   ) {}
 
-  @Get()
+  @Get('today')
   getTodayReservations() {
     try {
       logger.log('getTodayReservations 컨트롤러 호출');
