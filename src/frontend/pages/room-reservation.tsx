@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Calendar, Search, MessageCircle, Clock } from "lucide-react"
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { Button } from "../components/ui/button"
 import { Calendar as CalendarComponent } from "../components/ui/calendar"
@@ -43,6 +43,7 @@ import {
 } from "../components/ui/dialog"
 import { ChatInterface } from "../components/chat/ChatInterface"
 import { Input } from "../components/ui/input"
+import { ReservationEntity } from '../../backend/domains/reservation/entity/ReservationEntity';
 
 export default function Component() {
   const [date, setDate] = React.useState<Date>()
@@ -163,7 +164,6 @@ export default function Component() {
                 <SelectItem value="14:00">14:00 - 15:00</SelectItem>
                 <SelectItem value="15:00">15:00 - 16:00</SelectItem>
                 <SelectItem value="16:00">16:00 - 17:00</SelectItem>
-                <SelectItem value="16:00">17:00 - 18:00</SelectItem>
               </SelectContent>
             </Select>
             <Button
@@ -314,6 +314,22 @@ export default function Component() {
 }
 
 function AllRoomsTimetable() {
+  const [reservations, setReservations] = useState([]);
+
+  useEffect(() => {
+    const fetchReservations = async () => {
+      const response = await fetch('/api/reservations');
+      if (response.ok) {
+        const data = await response.json();
+        setReservations(data);
+      } else {
+        console.error('Failed to fetch reservations');
+      }
+    };
+
+    fetchReservations();
+  }, []);
+
   const timeSlots = Array.from({ length: 9 }, (_, i) => `${i + 9}:00`)
   const roomNumbers = [1, 4, 5, 6]
 
@@ -339,7 +355,7 @@ function AllRoomsTimetable() {
                   key={`${roomNumber}-${time}`} 
                   className="border-b border-[#3b547b]/10 p-3 text-center text-[#3b547b]"
                 >
-                  예약가능
+                  {reservations.some((reservation: ReservationEntity) => reservation.roomId === roomNumber && reservation.startTime === time) ? '예약됨' : '예약가능'}
                 </td>
               ))}
             </tr>
