@@ -56,6 +56,7 @@ export default function Component() {
     isBot: boolean;
   }>>([]);
   const [userName, setUserName] = useState<string>("");
+  const [reservations, setReservations] = useState<ReservationEntity[]>([]);
 
   const today = new Date()
   const days = ['일', '월', '화', '수', '목', '금', '토']
@@ -314,19 +315,16 @@ export default function Component() {
 }
 
 function AllRoomsTimetable() {
-  const [reservations, setReservations] = useState([]);
-
+  const [reservations, setReservations] = useState<ReservationEntity[]>([]);
+  
   useEffect(() => {
     const fetchReservations = async () => {
       const response = await fetch('http://localhost:3300/reservations/today');
       if (response.ok) {
         const data = await response.json();
         setReservations(data);
-      } else {
-        console.error('Failed to fetch reservations');
       }
     };
-
     fetchReservations();
   }, []);
 
@@ -348,22 +346,30 @@ function AllRoomsTimetable() {
         </thead>
         <tbody>
           {timeSlots.map(time => (
-            <tr key={time} className="hover:bg-[#3b547b]/5 transition-colors">
-              <td className="border-b border-[#3b547b]/10 p-3 text-center text-[#3b547b]/80">{time}</td>
-              {roomNumbers.map(roomNumber => (
-                <td 
-                  key={`${roomNumber}-${time}`} 
-                  className="border-b border-[#3b547b]/10 p-3 text-center text-[#3b547b]"
-                >
-                  {reservations.some((reservation: ReservationEntity) => reservation.roomId === roomNumber && reservation.startTime === time) ? '예약됨' : '예약가능'}
-                </td>
-              ))}
+            <tr key={time}>
+              <td className="border-b border-[#3b547b]/10 p-3 text-center">{time}</td>
+              {roomNumbers.map(roomNumber => {
+                const reservation = reservations.find(r => 
+                  r.roomId === roomNumber && 
+                  r.startTime.substring(8, 12) === time.split(':')[0].padStart(2, '0') + '00'
+                );
+                
+                return (
+                  <td key={`${roomNumber}-${time}`} className="border-b border-[#3b547b]/10 p-3 text-center">
+                    {reservation ? (
+                      <span className="font-bold text-[#4589c8]">
+                        {reservation.userName}
+                      </span>
+                    ) : '예약가능'}
+                  </td>
+                );
+              })}
             </tr>
           ))}
         </tbody>
       </table>
     </div>
-  )
+  );
 }
 
 function Room({
