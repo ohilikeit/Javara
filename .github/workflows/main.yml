@@ -18,6 +18,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          
+      # 디버깅 추가
+      - name: Debugging
+        run: |
+          echo "$JSON_PAYLOAD"
+          curl -v https://api.openai.com/v1/chat/completions \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -d "$JSON_PAYLOAD"
+
 
       # PR 전체 diff 추출
       - name: Fetch PR Diff
