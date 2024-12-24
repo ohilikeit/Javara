@@ -403,7 +403,7 @@ function AllRoomsTimetable() {
       <table className="w-full border-collapse">
         <thead>
           <tr>
-            <th className="border-b-2 border-[#3b547b]/20 p-3 text-center text-[#3b547b] font-bold">시간</th>
+            <th className="border-b-2 border-r-2 border-[#3b547b]/20 p-3 text-center text-[#3b547b] font-bold">시간</th>
             {roomNumbers.map(roomNumber => (
               <th key={roomNumber} className="border-b-2 border-[#3b547b]/20 p-3 text-center text-[#3b547b] font-bold">
                 토론방 {roomNumber}
@@ -414,7 +414,7 @@ function AllRoomsTimetable() {
         <tbody>
           {timeSlots.map(time => (
             <tr key={time}>
-              <td className="border-b border-[#3b547b]/10 p-3 text-center font-bold">
+              <td className="p-3 text-center font-bold border-r-2 border-[#3b547b]/20">
                 {time}
               </td>
               {roomNumbers.map(roomNumber => {
@@ -424,11 +424,22 @@ function AllRoomsTimetable() {
                 );
                 
                 return (
-                  <td key={`${roomNumber}-${time}`} className="border-b border-[#3b547b]/10 p-3 text-center">
+                  <td key={`${roomNumber}-${time}`} className="p-3 text-center">
                     {reservation ? (
-                      <span className="font-bold text-[#4589c8]">
-                        {reservation.userName}
-                      </span>
+                      <HoverCard openDelay={0} closeDelay={0}>
+                        <HoverCardTrigger>
+                          <span className="font-bold text-[#4589c8] px-3 py-1 rounded transition-colors hover:bg-[#4589c8] hover:text-white">
+                            {reservation.userName}
+                          </span>
+                        </HoverCardTrigger>
+                        <HoverCardContent className="relative bg-white p-4 rounded-full shadow-lg border border-gray-200 w-fit" 
+                          style={{ boxShadow: '0 4px 12px rgba(69, 137, 200, 0.15)' }}>
+                          <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-3 h-3 rotate-45 bg-white border-l border-t border-gray-200" />
+                          <div className="relative z-10">
+                            <h4 className="text-sm font-semibold text-gray-800 whitespace-nowrap px-2">{reservation.content}</h4>
+                          </div>
+                        </HoverCardContent>
+                      </HoverCard>
                     ) : '예약가능'}
                   </td>
                 );
