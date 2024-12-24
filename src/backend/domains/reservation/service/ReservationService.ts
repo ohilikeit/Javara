@@ -25,6 +25,7 @@ export class ReservationService {
             createReservationDTO.userId,
             createReservationDTO.roomId,
             createReservationDTO.userName,
+            createReservationDTO.content,
             createReservationDTO.startTime,
             createReservationDTO.endTime,
             createReservationDTO.status,

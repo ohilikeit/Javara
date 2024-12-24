@@ -3,6 +3,7 @@ export class CreateReservationDTO {
         public userId: 1,
         public roomId: number,
         public userName: string,
+        public content: string,
         public startTime: string,
         public endTime: string,
         public status: 0,
