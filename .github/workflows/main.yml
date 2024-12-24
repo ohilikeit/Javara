@@ -3,7 +3,7 @@
 name: GPT Code Review on Entire PR Diff
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, reopened, synchronize]
 
 permissions:
