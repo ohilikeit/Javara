@@ -52,14 +52,8 @@ export default function Component() {
       };
 
       const startTime = formatToTimeString(date, timeSlot);
-      
-      const response = await fetch(`http://localhost:3300/reservations/available?startTime=${startTime}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch available rooms');
-      }
-      
-      const data = await response.json();
-      setAvailableRooms(data);
+      const availableRooms = await ReservationService.getAvailableRooms(startTime);
+      setAvailableRooms(availableRooms);
     } catch (error) {
       console.error('Error:', error);
     }

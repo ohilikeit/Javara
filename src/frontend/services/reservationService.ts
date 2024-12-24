@@ -28,4 +28,17 @@ export class ReservationService {
       };
     }
   }
+
+  static async getAvailableRooms(startTime: string): Promise<number[]> {
+    try {
+      const response = await fetch(`http://localhost:3300/reservations/available?startTime=${startTime}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch available rooms');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching available rooms:', error);
+      throw error;
+    }
+  }
 } 
