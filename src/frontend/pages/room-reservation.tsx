@@ -18,6 +18,7 @@ import { Room } from "../components/room/Room"
 import { ReservationCalendar } from "../components/reservation/ReservationCalendar"
 import { ReservationDialog } from "../components/reservation/ReservationDialog"
 import { AllRoomsTimetable } from "../components/timetable/AllRoomsTimetable"
+import { ReservationService } from '../services/reservationService';
 
 export default function Component() {
   const [date, setDate] = React.useState<Date>()
@@ -97,30 +98,24 @@ export default function Component() {
       const [hours] = timeSlot.split(':').map(Number);
       const endTime = formatToTimeString(date, `${hours + 1}:00`);
 
-      const response = await fetch('/api/reservation/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          roomId: selectedRoom,
-          startTime,
-          endTime,
-          userName,
-          content,
-          status: 1,
-          userId: 1
-        }),
+      const result = await ReservationService.createReservation({
+        roomId: selectedRoom!,
+        startTime,
+        endTime,
+        userName,
+        content,
+        status: 1,
+        userId: 1
       });
 
-      if (response.ok) {
+      if (result.success) {
         alert('예약이 완료되었습니다!');
         setSelectedRoom(null);
         setUserName("");
         setContent("");
         await handleSearch();
       } else {
-        alert('예약에 실패했습니다.');
+        alert(result.message || '예약에 실패했습니다.');
       }
     } catch (error) {
       console.error('Error:', error);
