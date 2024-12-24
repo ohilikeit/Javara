@@ -399,8 +399,11 @@ function AllRoomsTimetable() {
   const roomNumbers = [1, 4, 5, 6]
 
   return (
-    <div className="overflow-x-auto bg-white rounded-xl shadow-lg p-6">
-      <table className="w-full border-collapse">
+    <div className="overflow-x-auto bg-white rounded-xl shadow-lg p-6 relative">
+      <div className="absolute inset-0 opacity-20 flex justify-center items-center pointer-events-none">
+        <img src="/images/logo.png" alt="Logo" className="max-w-xs" />
+      </div>
+      <table className="w-full border-collapse relative z-10">
         <thead>
           <tr>
             <th className="border-b-2 border-r-2 border-[#3b547b]/20 p-3 text-center text-[#3b547b] font-bold">시간</th>
