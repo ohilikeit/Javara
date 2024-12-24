@@ -21,6 +21,7 @@ export class ReservationRepository implements ReservationInterfaceRepository {
                     endTime: reservation.getEndTime(),
                     status: reservation.getStatus(),
                     userName: reservation.getUserName(),
+                    content: reservation.getContent(),
                     createdAt: new Date()
                 }
             });
@@ -30,6 +31,7 @@ export class ReservationRepository implements ReservationInterfaceRepository {
                 createdReservation.userId,
                 createdReservation.roomId,
                 createdReservation.userName,
+                createdReservation.content ?? '',
                 createdReservation.startTime.toString(),
                 createdReservation.endTime.toString(),
                 createdReservation.status,
@@ -58,8 +60,9 @@ export class ReservationRepository implements ReservationInterfaceRepository {
                 reservation.userId,
                 reservation.roomId,
                 reservation.userName,
-                reservation.startTime,
-                reservation.endTime,
+                reservation.content ?? '',
+                reservation.startTime.toString(),
+                reservation.endTime.toString(), 
                 reservation.status,
                 reservation.createdAt
             ));
@@ -82,8 +85,9 @@ export class ReservationRepository implements ReservationInterfaceRepository {
                 reservation.userId,
                 reservation.roomId,
                 reservation.userName,
-                reservation.startTime,
-                reservation.endTime,
+                reservation.content ?? '',
+                reservation.startTime.toString(),
+                reservation.endTime.toString(),
                 reservation.status,
                 reservation.createdAt
             ));

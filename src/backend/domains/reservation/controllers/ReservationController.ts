@@ -1,6 +1,7 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Post, Body } from '@nestjs/common';
 import { ReservationService } from '../service/ReservationService';
 import { logger } from '../../../utils/logger';
+import { CreateReservationDTO } from '../dto/CreateReservationDTO';
 
 @Controller('reservations')
 export class ReservationController {
@@ -26,6 +27,17 @@ export class ReservationController {
       return await this.reservationService.getAvailableRooms(startTime);
     } catch (error) {
       logger.error('getAvailableRooms 에러:', error);
+      throw error;
+    }
+  }
+
+  @Post()
+  async createReservation(@Body() createReservationDTO: CreateReservationDTO) {
+    try {
+      logger.log('createReservation 컨트롤러 호출:', createReservationDTO);
+      return await this.reservationService.createReservation(createReservationDTO);
+    } catch (error) {
+      logger.error('createReservation 에러:', error);
       throw error;
     }
   }
