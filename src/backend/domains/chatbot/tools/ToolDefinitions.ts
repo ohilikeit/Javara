@@ -3,12 +3,14 @@ import { z } from "zod";
 import { IReservationTool } from "./interfaces/IReservationTool";
 import { SQLiteReservationTool } from "./implementations/SQLiteReservationTool";
 import { logger } from "@/utils/logger";
-import { ReservationValidator } from "./validators/ReservationValidator";
-import { ReservationInfo } from "../types/ReservationTypes";
 
 export class ReservationTools {
   private reservationTool: IReservationTool;
   private activeReservations: Map<string, boolean> = new Map();
+  private availabilityCache = new Map<string, {
+    result: any;
+    timestamp: number;
+  }>();
 
   constructor() {
     this.reservationTool = new SQLiteReservationTool();
@@ -136,22 +138,38 @@ export class ReservationTools {
         name: "check_availability",
         description: "특정 날짜와 시간의 토론방 예약 가능 여부를 확인합니다.",
         schema: z.object({
-          date: z.string().describe("검색할 날짜 (YYYY-MM-DD 형)"),
-          startTime: z.string().optional().describe("시작 시간 (HH:00 형식)"),
-          roomId: z.number().optional().describe("토론방 번호 (1,4,5,6 중 선택)")
+          date: z.string().describe("확인하려는 날짜 (YYYY-MM-DD 형식)"),
+          startTime: z.string().describe("시작 시간 (HH:mm 형식)"),
+          roomId: z.number().describe("토론방 번호 (1,4,5,6 중 하나)")
         }),
         func: async ({ date, startTime, roomId }) => {
           try {
-            const result = await this.reservationTool.checkAvailability(
-              new Date(date),
+            const parsedDate = new Date(date);
+            const reservationTool = new SQLiteReservationTool();
+
+            // 날짜 유효성 검사는 MessageParsingTool에서 이미 수행됨
+            const cacheKey = `${date}_${startTime}_${roomId}`;
+            const cached = this.availabilityCache.get(cacheKey);
+            if (cached && Date.now() - cached.timestamp < 5000) { // 5초 캐시
+              return JSON.stringify(cached.result);
+            }
+
+            const result = await reservationTool.checkAvailability(
+              parsedDate,
               startTime,
               roomId
             );
+
+            this.availabilityCache.set(cacheKey, {
+              result,
+              timestamp: Date.now()
+            });
+
             return JSON.stringify(result);
           } catch (error) {
             logger.error('check_availability 에러:', error);
             return JSON.stringify({
-              success: false,
+              available: false,
               error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다."
             });
           }
@@ -169,73 +187,9 @@ export class ReservationTools {
           content: z.string().describe("회의 내용")
         }),
         func: async ({ date, startTime, duration, roomId, userName, content }) => {
-          const reservationKey = `${date}_${startTime}_${roomId}`;
-          
           try {
-            const reservationDateTime = DateUtils.toReservationDateTime(date, startTime);
-            const endDateTime = DateUtils.calculateEndTime(reservationDateTime, duration);
-
-            // 중복 예약 방지를 위한 락 확인
-            if (this.activeReservations.get(reservationKey)) {
-              return JSON.stringify({
-                success: false,
-                error: "동일한 예약이 처리 중입니다.",
-                errorType: 'DUPLICATE_REQUEST'
-              });
-            }
-            
-            this.activeReservations.set(reservationKey, true);
-
-            // ���론방 번호가 없는 경우 가용한 방 찾기
-            if (!roomId) {
-              const availability = await this.reservationTool.checkAvailability(
-                new Date(date),
-                startTime
-              );
-
-              if (!availability.available) {
-                return JSON.stringify({
-                  success: false,
-                  error: "선택한 시간에 예약 가능한 토론방이 없습니다.",
-                  errorType: 'NO_AVAILABLE_ROOM'
-                });
-              }
-
-              // 가용한 방 중 가장 작은 번호의 방 선택
-              const availableRooms = availability.availableSlots
-                .map(slot => slot.roomId)
-                .filter((value, index, self) => self.indexOf(value) === index)
-                .sort((a, b) => a - b);
-
-              if (availableRooms.length === 0) {
-                return JSON.stringify({
-                  success: false,
-                  error: "예약 가능한 토론방이 없습니다.",
-                  errorType: 'NO_AVAILABLE_ROOM'
-                });
-              }
-
-              roomId = availableRooms[0];
-            }
-
-            // 선택된 방에 대해 최종 가용성 체크
-            const finalAvailability = await this.reservationTool.checkAvailability(
-              new Date(date),
-              startTime,
-              roomId
-            );
-
-            if (!finalAvailability.available) {
-              return JSON.stringify({
-                success: false,
-                error: `${roomId}번 토론방은 해당 시간에 이미 예약되어 있습니다.`,
-                errorType: 'ROOM_NOT_AVAILABLE'
-              });
-            }
-
-            // 예약 생성
-            const result = await this.reservationTool.createReservation({
-              date: new Date(date),
+            logger.log('예약 생성 요청 파라미터:', {
+              date,
               startTime,
               duration,
               roomId,
@@ -243,20 +197,33 @@ export class ReservationTools {
               content
             });
 
-            // 성공 응답에 예약 완료 상태 플래그 추가
+            // 날짜 검증
+            const reservationDate = new Date(date);
+            if (isNaN(reservationDate.getTime())) {
+              throw new Error('유효하지 않은 날짜 형식입니다.');
+            }
+
+            const result = await this.reservationTool.createReservation({
+              date: reservationDate,
+              startTime,
+              duration,
+              roomId,
+              userName,
+              content
+            });
+
             return JSON.stringify({
               success: true,
-              message: `예약이 완료되었습니다. (${roomId}번 토론방)`,
-              reservationCompleted: true,  // 예약 완료 상태 표시
+              message: `예약이 완료되었습니다.`,
               reservationDetails: {
-                date,
+                date: reservationDate,
                 startTime,
                 duration,
                 roomId,
-                userName
+                userName,
+                content
               }
             });
-
           } catch (error) {
             logger.error('create_reservation 에러:', error);
             
@@ -269,108 +236,6 @@ export class ReservationTools {
               success: false,
               error: errorMessage,
               errorType
-            });
-
-          } finally {
-            this.activeReservations.delete(reservationKey);
-          }
-        }
-      }),
-      new DynamicStructuredTool({
-        name: "parse_reservation_info",
-        description: "사용자 메시지에서 예약 관련 정보를 추출합니다.",
-        schema: z.object({
-          message: z.string().describe("사용자 메시지"),
-          currentInfo: z.object({
-            date: z.string().optional(),
-            timeRange: z.string().optional()
-          }).optional()
-        }),
-        func: async ({ message, currentInfo }) => {
-          try {
-            const info: Partial<ReservationInfo> = {};
-            
-            // 날짜 파싱
-            if (message.includes('다음주')) {
-              const dayMatch = message.match(/(월|화|수|목|금)요일/);
-              if (dayMatch) {
-                const dayMap: { [key: string]: number } = {
-                  '월': 1, '화': 2, '수': 3, '목': 4, '금': 5
-                };
-                const targetDate = this.getNextWeekday(dayMap[dayMatch[1]]);
-                info.date = targetDate;
-              }
-            }
-
-            // 시간대 파싱
-            if (message.includes('오전')) {
-              info.timeRange = 'morning';
-            } else if (message.includes('오후')) {
-              info.timeRange = 'afternoon';
-            }
-
-            // 구체적인 시간 파싱
-            const timeMatch = message.match(/(\d{1,2})시(?:부터|~|\s)?(\d{1,2})?시(?:까지)?/);
-            if (timeMatch) {
-              const startHour = parseInt(timeMatch[1]);
-              info.startTime = `${startHour.toString().padStart(2, '0')}:00`;
-              if (timeMatch[2]) {
-                const endHour = parseInt(timeMatch[2]);
-                info.duration = endHour - startHour;
-              }
-            }
-
-            // 이름과 목적 파싱
-            const nameMatch = message.match(/(?:나는|제?이름은)\s*([가-힣]+)(?:이고|입니다|이야|예요|이에요)/);
-            if (nameMatch) {
-              info.userName = nameMatch[1];
-            }
-
-            const purposeMatch = message.match(/(?:목적은|내용은)?\s*(.+?)(?:할|하려|하고|예약|어)?(?:거야|습니다|해요|해|$)/);
-            if (purposeMatch) {
-              info.content = purposeMatch[1].trim();
-            }
-
-            return JSON.stringify({
-              success: true,
-              reservationInfo: info
-            });
-          } catch (error) {
-            return JSON.stringify({
-              success: false,
-              error: error instanceof Error ? error.message : '파싱 실패'
-            });
-          }
-        }
-      }),
-      new DynamicStructuredTool({
-        name: "check_reservation_availability",
-        description: "특정 시간의 예약 가능 여부를 확인합니다.",
-        schema: z.object({
-          date: z.string().describe("확인할 날짜 (YYYY-MM-DD 형)"),
-          startTime: z.string().describe("시작 시간 (HH:00 형식)"),
-          roomId: z.number().describe("토론방 번호")
-        }),
-        func: async ({ date, startTime, roomId }) => {
-          try {
-            const availability = await this.reservationTool.checkAvailability(
-              new Date(date),
-              startTime,
-              roomId
-            );
-
-            return JSON.stringify({
-              success: true,
-              available: availability.available,
-              message: availability.available 
-                ? "예약 가능한 시간입니다."
-                : "이미 예약된 시간입니다."
-            });
-          } catch (error) {
-            logger.error('check_availability 에러:', error);
-            return JSON.stringify({
-              success: false,
-              error: "가용성 확인 중 오류가 발생했습니다."
             });
           }
         }

@@ -109,18 +109,26 @@ export function ChatInterface({ messages, onMessagesChange }: ChatInterfaceProps
 
     setIsLoading(true);
     try {
+      let streamingMessage = '';
+      
       // AI 응답 처리
       const response = await chatService.current.processMessage(
         sessionId.current,
         userMessage,
-        (response) => {
-          if (typeof response === 'string') {
-            // 스트리밍 처리는 여기서 하지 않음
+        (token) => {
+          if (typeof token === 'string') {
+            streamingMessage += token;
+            // 스트리밍 중인 메시지 업데이트
+            onMessagesChange([
+              ...messages,
+              { content: userMessage, isBot: false },
+              { content: streamingMessage, isBot: true }
+            ]);
           }
         }
       );
 
-      // AI 응답 추가
+      // 최종 응답으로 메시지 업데이트
       onMessagesChange([
         ...messages,
         { content: userMessage, isBot: false },

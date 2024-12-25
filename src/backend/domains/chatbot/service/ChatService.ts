@@ -7,7 +7,7 @@ import { AgentExecutor, createOpenAIFunctionsAgent } from "langchain/agents";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { ReservationInfo } from '../types/ReservationTypes';
 import { logger } from '@/utils/logger';
-import { DateParsingTool } from '../tools/implementations/DateParsingTool';
+import { MessageParsingTool } from '../tools/MessageParsingTool';
 
 type StreamCallback = (token: string) => void;
 
@@ -20,18 +20,23 @@ export class ChatService {
   private isCreatingReservation: boolean = false;
   private readonly systemPrompt = `당신은 토론방 예약 시스템의 상담원입니다. 항상 친절하게 응답해주세요.
 
-  # 예약 관련 준수사항
-  - 예약에 필요한 정보: 날짜(필수), 사용시간대(필수), 토론방번호(1,4,5,6중 선택), 예약자이름(필수), 회의내용(필수)
-  - 예약 가능 시간: 평일 9시~18시
-  - 시간 단위: 1시간
-  - 토론방 예약과 관련없는 질문에는 친절하게 토론방과 관련된 문의를 부탁드린다고 응답하고 원하는 정보를 유도해주세요.
-  - 모든 필수 정보가 수집되면 예약 가능 여부를 확인하고 예약을 진행하세요.
-  - 사용자의 의도를 파악하여 자연스럽게 대화를 이어가며 필요한 정보를 수집하세요.
-  - 방 번호는 1,4,5,6 중 하나 중 아무거나 상관없이 비어있다면 자유롭게 선택해주세요.
-  - 예약할 날짜에 대한 구체적인 언급 보다는 사용자가 직접 날짜에 대한 언급을 할 때에만 답변으로 확인해주세요.`;
+# 예약 관련 준수사항
+- 예약에 필요한 정보: 날짜(필수), 사용시간대(필수), 토론방번호(1,4,5,6중 선택), 예약자이름(필수), 회의내용(필수)
+- 예약 가능 시간: 평일 9시~18시
+- 시간 단위: 1시간
+
+# 예약 처리 절차
+1. 예약 가능 여부를 물어보거나 모든 예약 관련 정보를 받아서 예약을 할 시엔 반드시 check_availability 도구로 예약 가능 여부를 먼저 확인하세요.
+2. 예약 가능한 경우에만 create_reservation 도구를 사용하세요.
+3. 예약 불가능한 경우 예약 가능한 다른 시간을 안내하세요.
+
+# 주의사항
+- 예약 가능 여부를 확인하지 않고 절대 답변하지 마세요.
+- 모든 필수 정보가 수집되면 반드시 예약 가능 여부를 확인하세요.
+- 사용자의 의도를 파악하여 자연스럽게 대화를 이어가며 필요한 정보를 수집하세요.`;
 
   constructor() {
-    console.log('ChatService 초기화 시작');
+    logger.log('ChatService 초기화 시작');
     const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
     
     if (!apiKey || !apiKey.startsWith('sk-')) {
@@ -90,8 +95,8 @@ export class ChatService {
         agent,
         tools,
         verbose: true,
-        maxIterations: 3,
-        returnIntermediateSteps: true
+        returnIntermediateSteps: true,
+        maxIterations: 5
       });
 
       logger.log('Agent 초기화 완료');
@@ -111,39 +116,87 @@ export class ChatService {
   async processMessage(sessionId: string, message: string, onStream: (token: string) => void): Promise<string> {
     try {
         const session = this.getOrCreateSession(sessionId);
-        session.addMessage('user', message);
-
-        // 날짜 파싱
-        const date = await DateParsingTool.parseDateString(message);
         
-        if (date) {
-            // 주말 체크
-            const dayOfWeek = date.getDay();
-            if (dayOfWeek === 0 || dayOfWeek === 6) {
-                const response = "죄송합니다. 주말은 예약이 불가능합니다. 평일(월~금)에 예약해주시겠어요?";
-                await this.streamResponse(response, onStream);
-                return response;
-            }
+        logger.log('메시지 처리 시작 - 현재 상태:', {
+            sessionId,
+            message,
+            currentState: session.getReservationState(),
+            currentInfo: session.getReservationInfo(),
+            timestamp: new Date().toISOString()
+        });
 
-            // 날짜가 유효한 경우 예약 정보 업데이트
-            session.updateReservationInfo({ date });
+        session.addMessage('user', message);
+        
+        // 정보 수집 상태일 때 파싱 및 업데이트
+        if (session.getReservationState() === ReservationState.COLLECTING_INFO) {
+            await this.updateSessionInfo(session, message);
         }
 
-        // 나머지 예약 처리 로직...
+        // Agent 컨텍스트 구성 및 호출
+        const currentInfo = session.getReservationInfo();
         const agentContext = this.buildAgentContext(session);
+        
+        logger.log('Agent 호출 전 현재 정보:', {
+            sessionId,
+            info: currentInfo,
+            hasDate: !!currentInfo.date,
+            dateValue: currentInfo.date?.toISOString()
+        });
+
+        // Agent 호출 시 메타데이터에 현재 세션 정보 포함
         const result = await this.agent?.invoke({
-            input: agentContext
+            input: agentContext,
+            metadata: {
+                sessionInfo: currentInfo,
+                sessionId: sessionId
+            }
         });
 
         if (!result) throw new Error('Agent 응답 없음');
-
+        
         const response = result.output;
         session.addMessage('assistant', response);
+
+        await this.handleAgentResponse(session, response);
         await this.streamResponse(response, onStream);
+        
         return response;
 
     } catch (error) {
         return this.handleError(error, onStream);
+    }
+  }
+
+  private async updateSessionInfo(session: ChatSessionEntity, message: string): Promise<void> {
+    // 날짜 파싱
+    const dateResult = await MessageParsingTool.parseDateString(message);
+    if (dateResult.date && dateResult.confidence >= 0.7) {
+        const prevInfo = session.getReservationInfo();
+        session.updateReservationInfo({ 
+            ...prevInfo,
+            date: dateResult.date 
+        });
+        
+        logger.log('날짜 정보 업데이트:', {
+            sessionId: session.getSessionId(),
+            date: dateResult.date,
+            confidence: dateResult.confidence
+        });
+    }
+    
+    // 다른 예약 정보 파싱
+    const parsedInfo = await MessageParsingTool.parseReservationInfo(message);
+    if (Object.keys(parsedInfo).length > 0) {
+        const prevInfo = session.getReservationInfo();
+        session.updateReservationInfo({
+            ...prevInfo,
+            ...parsedInfo
+        });
+        
+        logger.log('예약 정보 업데이트:', {
+            sessionId: session.getSessionId(),
+            updatedInfo: parsedInfo
+        });
     }
   }
 
@@ -153,64 +206,30 @@ export class ChatService {
     
     const contextParts = [];
 
-    // 예약 정보 컨텍스트
     if (Object.keys(info).length > 0) {
-      contextParts.push('현재까지 확인된 예약 정보:');
-      if (info.date) contextParts.push(`- 날짜: ${info.date instanceof Date ? info.date.toLocaleDateString() : new Date(info.date).toLocaleDateString()}`);
-      if (info.timeRange) contextParts.push(`- 시간대: ${info.timeRange}`);
-      if (info.startTime) contextParts.push(`- ��작 시간: ${info.startTime}`);
-      if (info.duration) contextParts.push(`- 사용 시간: ${info.duration}시간`);
-      if (info.roomId) contextParts.push(`- 토론방: ${info.roomId}번`);
-      if (info.userName) contextParts.push(`- 예약자: ${info.userName}`);
-      if (info.content) contextParts.push(`- 목적: ${info.content}`);
-      contextParts.push('');
+        contextParts.push('현재 예약 정보:');
+        if (info.date) {
+            contextParts.push(`- 날짜: ${info.date.toISOString().split('T')[0]}`);
+        }
+        if (info.startTime) contextParts.push(`- 시작 시간: ${info.startTime}`);
+        if (info.duration) contextParts.push(`- 예약 시간: ${info.duration}시간`);
+        if (info.roomId) contextParts.push(`- 방 번호: ${info.roomId}번`);
+        if (info.userName) contextParts.push(`- 예약자: ${info.userName}`);
+        if (info.content) contextParts.push(`- 목적: ${info.content}`);
+        contextParts.push('');
     }
 
-    // 최근 대화 이력
-    contextParts.push('최근 대화 내역:');
+    contextParts.push('최근 대화:');
     recentMessages.forEach(msg => {
-      contextParts.push(`${msg.role === 'user' ? '사용자' : 'AI'}: ${msg.content}`);
+        contextParts.push(`${msg.role === 'user' ? '사용자' : 'AI'}: ${msg.content}`);
     });
-    contextParts.push('');
 
     return contextParts.join('\n');
   }
 
-  private buildContextMessage(message: string, reservationInfo: ReservationInfo): string {
-    const context = [];
-    
-    if (reservationInfo.date) {
-      const dateObj = reservationInfo.date instanceof Date ? reservationInfo.date : new Date(reservationInfo.date);
-      context.push(`예약 날짜: ${dateObj.toLocaleDateString()}`);
-    }
-    if (reservationInfo.timeRange) {
-      context.push(`시간대: ${reservationInfo.timeRange === 'morning' ? '오전' : '오후'}`);
-    }
-    if (reservationInfo.startTime) {
-      context.push(`시작 시간: ${reservationInfo.startTime}`);
-    }
-    if (reservationInfo.duration) {
-      context.push(`사용 시간: ${reservationInfo.duration}시간`);
-    }
-    if (reservationInfo.roomId) {
-      context.push(`회의실: ${reservationInfo.roomId}번`);
-    }
-    if (reservationInfo.userName) {
-      context.push(`예약자: ${reservationInfo.userName}`);
-    }
-    if (reservationInfo.content) {
-      context.push(`목적: ${reservationInfo.content}`);
-    }
-
-    const contextStr = context.length > 0 ? 
-      `현재까지 확인된 예약 정보:\n${context.join('\n')}\n\n` : '';
-
-    return `${contextStr}사자 메시지: ${message}`;
-  }
-
   private async handleError(error: unknown, onStream: (token: string) => void): Promise<string> {
     logger.error('Error in processMessage:', error);
-    let response = "죄송합니다. 처리 중 오류가 발생했습니다.";
+    let response = "송합니다. 처리 중 오류가 발생했습니다.";
     
     if (error instanceof Error) {
         if (error.message.includes('2주')) {
@@ -320,24 +339,42 @@ export class ChatService {
     return `${endHour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
   }
 
-  async handleReservationResponse(response: any, onStream: StreamCallback) {
-    const parsedResponse = typeof response === 'string' ? JSON.parse(response) : response;
+  private async handleAgentResponse(session: ChatSessionEntity, agentResponse: string): Promise<void> {
+    const currentInfo = session.getReservationInfo();
+    const currentState = session.getReservationState();
+    
+    // 필수 정보 체크 로직 개선
+    const hasAllRequiredInfo = this.checkRequiredInfo(currentInfo);
+    
+    if (currentState === ReservationState.COLLECTING_INFO && hasAllRequiredInfo) {
+      logger.log('모든 필수 정보 수집 완료, CONFIRMING 상태로 전환', {
+        sessionId: session.getSessionId(),
+        info: currentInfo
+      });
+      session.setReservationState(ReservationState.CONFIRMING);
+      
+      // 예약 가능 여부 최종 확인
+      const availability = await this.reservationTool.checkAvailability(
+        currentInfo.date!,
+        currentInfo.startTime,
+        currentInfo.roomId
+      );
 
-    if (parsedResponse.success && parsedResponse.reservationCompleted) {
-      // 예약이 완료된 경우, 추가 요청을 하지 않고 성공 메시지만 표시
-      const details = parsedResponse.reservationDetails;
-      const successMessage = `예약이 완료되었습니다!\n\n` +
-        `- **예약자 이름:** ${details.userName}\n` +
-        `- **예약 날짜:** ${new Date(details.date).toLocaleDateString('ko-KR')}\n` +
-        `- **예약 시간:** ${details.startTime} (${details.duration}시간)\n` +
-        `- **방 번호:** ${details.roomId}번 방\n\n` +
-        `추가로 궁금 점이 있으시면 언제든지 문의해 주세요!`;
-
-      await this.streamResponse(successMessage, onStream);
-      return successMessage;
+      if (!availability.available) {
+        session.setReservationState(ReservationState.COLLECTING_INFO);
+        throw new Error('선택하신 시간은 이미 예약되었습니다.');
+      }
     }
+  }
 
-    // 예약이 완료되지 않은 경우 기존 로직 수행
-    return await this.handleError(parsedResponse, onStream);
+  private checkRequiredInfo(info: ReservationInfo): boolean {
+    return !!(
+      info.date && 
+      info.startTime && 
+      info.duration && 
+      info.roomId && 
+      info.userName && 
+      info.content
+    );
   }
 } 

@@ -21,6 +21,14 @@ export class ChatSessionEntity {
 
   constructor(sessionId: string) {
     this.sessionId = sessionId;
+    logger.log('새로운 ChatSession 생성:', {
+      sessionId,
+      initialState: this.reservationState
+    });
+  }
+
+  getSessionId(): string {
+    return this.sessionId;
   }
 
   addMessage(role: 'user' | 'assistant', content: string): void {
@@ -48,14 +56,18 @@ export class ChatSessionEntity {
   }
 
   updateReservationInfo(info: Partial<ReservationInfo>): void {
+    const previousInfo = { ...this.reservationInfo };
     this.reservationInfo = {
       ...this.reservationInfo,
       ...info
     };
 
-    logger.log('예약 정보 업데이트 완료:', {
-      userId: this.sessionId,
-      currentState: this.reservationInfo
+    logger.log('예약 정보 업데이트:', {
+      sessionId: this.sessionId,
+      previousInfo,
+      newInfo: this.reservationInfo,
+      currentState: this.reservationState,
+      timestamp: new Date().toISOString()
     });
   }
 
@@ -64,7 +76,16 @@ export class ChatSessionEntity {
   }
 
   setReservationState(state: ReservationState): void {
+    const previousState = this.reservationState;
     this.reservationState = state;
+    
+    logger.log('예약 상태 설정:', {
+      sessionId: this.sessionId,
+      previousState,
+      newState: state,
+      currentInfo: this.getReservationInfo(),
+      timestamp: new Date().toISOString()
+    });
   }
 
   getReservationState(): ReservationState {
@@ -72,7 +93,18 @@ export class ChatSessionEntity {
   }
 
   clearReservationInfo(): void {
+    logger.log('예약 정보 초기화:', {
+      sessionId: this.sessionId,
+      previousInfo: this.reservationInfo,
+      previousState: this.reservationState
+    });
+
     this.reservationInfo = {};
     this.reservationState = ReservationState.COLLECTING_INFO;
+
+    logger.log('예약 정보 초기화 완료:', {
+      sessionId: this.sessionId,
+      currentState: this.reservationState
+    });
   }
 } 

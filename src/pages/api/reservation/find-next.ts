@@ -52,12 +52,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       all: { start: 9, end: 18 }
     };
 
-    // 기존 예약 ��회
+    // 기존 예약 확인
     const existingReservations = await prisma.reservation.findMany({
       where: {
         startTime: {
-          gte: startOfDay,
-          lte: endOfDay,
+          gte: startOfDay.toISOString(),
+          lte: endOfDay.toISOString(),
         },
         ...(preferredRoom ? { roomId: Number(preferredRoom) } : {}),
         status: 1,

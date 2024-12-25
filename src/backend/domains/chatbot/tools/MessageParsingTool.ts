@@ -1,81 +1,71 @@
-import { DynamicStructuredTool } from "@langchain/core/tools";
-import { z } from "zod";
-import { logger } from "@/utils/logger";
-import { ReservationInfo } from "../types/ReservationTypes";
+import { DateParsingTool } from './implementations/DateParsingTool';
+import { logger } from '@/utils/logger';
+import { ReservationInfo } from '../types/ReservationTypes';
 
 export class MessageParsingTool {
-  static getTool() {
-    return new DynamicStructuredTool({
-      name: "parse_reservation_info",
-      description: "사용자의 자연어 메시지에서 예약 관련 정보를 추출합니다.",
-      schema: z.object({
-        message: z.string().describe("분석할 사용자 메시지"),
-        currentDate: z.string().optional().describe("현재 대화에서 언급된 날짜 (YYYY-MM-DD 형식)"),
-        currentTimeRange: z.string().optional().describe("현재 대화에서 언급된 시간대")
-      }),
-      func: async ({ message, currentDate, currentTimeRange }) => {
-        try {
-          logger.log('메시지 파싱 시작:', {
-            message,
-            currentDate,
-            currentTimeRange
-          });
+  static async parseDateString(input: string, currentDate: Date = new Date()): Promise<{ date: Date | null; confidence: number }> {
+    try {
+      // DateParsingTool을 통한 날짜 파싱
+      const result = await DateParsingTool.parseDateString(input, currentDate);
+      return {
+        date: result.date,
+        confidence: result.confidence
+      };
+    } catch (error) {
+      logger.error('날짜 파싱 실패:', error);
+      return { date: null, confidence: 0 };
+    }
+  }
 
-          // 파싱 결과를 저장할 객체
-          const parsedInfo: Partial<ReservationInfo> = {};
-
-          // 날짜 정보가 있으면 유지
-          if (currentDate) {
-            parsedInfo.date = new Date(currentDate);
-          }
-
-          // 시간 관련 키워드 처리
-          if (message.includes('~')) {
-            const timeMatch = message.match(/(\d{1,2})~(\d{1,2})시/);
-            if (timeMatch) {
-              const startHour = parseInt(timeMatch[1]);
-              const endHour = parseInt(timeMatch[2]);
-              parsedInfo.startTime = `${startHour.toString().padStart(2, '0')}:00`;
-              parsedInfo.duration = endHour - startHour;
-            }
-          }
-
-          // 이름과 목적 추출을 위한 프롬프트 생성
-          const extractionPrompt = `
-            다음 메시지에서 예약자 이름과 회의 목적을 추출해주세요:
-            "${message}"
-            
-            형식:
-            {
-              "userName": "추출된 이름",
-              "content": "추출된 회의 목적"
-            }
-          `;
-
-          // LLM을 통한 정보 추출
-          // 실제 구현에서는 this.model.invoke() 등을 사용
-          if (message.includes('이고') && message.includes('할거야')) {
-            const nameContentMatch = message.match(/나는\s+(.+?)이고\s+(.+?)\s+할거야/);
-            if (nameContentMatch) {
-              parsedInfo.userName = nameContentMatch[1];
-              parsedInfo.content = nameContentMatch[2];
-            }
-          }
-
-          logger.log('파싱 결과:', parsedInfo);
-
-          return JSON.stringify({
-            success: true,
-            parsedInfo
-          });
-        } catch (error) {
-          logger.error('메시지 파싱 에러:', error);
-          return JSON.stringify({
-            success: false,
-            error: error instanceof Error ? error.message : '메시지 파싱 중 오류가 발생했습니다.'
-          });
+  static async parseReservationInfo(message: string): Promise<Partial<ReservationInfo>> {
+    try {
+      const info: Partial<ReservationInfo> = {};
+      
+      // 시간 파싱 개선
+      const timeMatch = message.match(/(?:오전|오후)?\s*(\d{1,2})시(?:부터|까지)?/);
+      if (timeMatch) {
+        const hour = parseInt(timeMatch[1]);
+        const isAfternoon = message.includes('오후');
+        const adjustedHour = isAfternoon ? (hour === 12 ? 12 : hour + 12) : (hour === 12 ? 0 : hour);
+        if (adjustedHour >= 9 && adjustedHour <= 17) {
+          info.startTime = `${adjustedHour.toString().padStart(2, '0')}:00`;
         }
       }
-    });
+
+      // 기간 파싱 개선
+      const durationMatch = message.match(/(\d+)\s*시간/);
+      if (durationMatch) {
+        const duration = parseInt(durationMatch[1]);
+        if (duration >= 1 && duration <= 9) {
+          info.duration = duration;
+        }
+      }
+
+      // 방 번호 파싱
+      const roomMatch = message.match(/(\d+)(?:번|호|실)?(?:\s*방)?/);
+      if (roomMatch) {
+        const roomId = parseInt(roomMatch[1]);
+        if ([1, 4, 5, 6].includes(roomId)) {
+          info.roomId = roomId;
+        }
+      }
+
+      // 이름과 목적 파싱 개선
+      const nameMatch = message.match(/(?:저는|난?)\s*([가-힣a-zA-Z]+)(?:이?(?:고|예요|입니다|야))/);
+      if (nameMatch) {
+        info.userName = nameMatch[1];
+      }
+
+      // 회의 목적 파싱 개선
+      const purposeMatch = message.match(/(?:크리스마스|솔루션|전략|회의|미팅|토론|세미나|교육|강의|발표)(?:\s*(?:할(?:거야|예정|계획))?)/);
+      if (purposeMatch) {
+        info.content = purposeMatch[0].trim();
+      }
+
+      return info;
+    } catch (error) {
+      logger.error('예약 정보 파싱 실패:', error);
+      return {};
+    }
   }
 } 
