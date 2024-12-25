@@ -1,18 +1,40 @@
+import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
+
+@Entity()
 export class ReservationEntity {
-    private readonly reservationId: number;
-    private readonly userId: number;
-    private readonly roomId: number; 
-    private readonly userName: string;   
-    private readonly startTime: string;
-    private readonly endTime: string;
-    private status: number;
-    private readonly regdate: Date;
+    @PrimaryGeneratedColumn()
+    public reservationId: number;
+
+    @Column()
+    public userId: number;
+
+    @Column()
+    public roomId: number;
+
+    @Column({ nullable: false })
+    public userName: string;
+
+    @Column({ nullable: false })
+    public content: string;
+
+    @Column({ nullable: false })
+    public startTime: string;
+
+    @Column({ nullable: false })
+    public endTime: string;
+
+    @Column()
+    public status: number;
+
+    @Column()
+    public regdate: Date;
 
     constructor(
         reservationId: number,
         userId: number,
         roomId: number,
         userName: string,
+        content: string,
         startTime: string,
         endTime: string,
         status: number,
@@ -22,6 +44,7 @@ export class ReservationEntity {
         this.userId = userId;
         this.roomId = roomId;
         this.userName = userName;
+        this.content = content;
         this.startTime = startTime;
         this.endTime = endTime;
         this.status = status;
@@ -59,6 +82,10 @@ export class ReservationEntity {
 
     public getRegdate(): Date {
         return this.regdate;
+    }
+
+    public getContent(): string {
+        return this.content;
     }
 
     // Status만 변경 가능하도록 setter 제공
