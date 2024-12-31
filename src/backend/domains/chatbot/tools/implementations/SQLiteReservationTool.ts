@@ -128,6 +128,7 @@ export class SQLiteReservationTool implements IReservationTool {
     timeRange: "morning" | "afternoon" | "all";
     preferredRoom?: number;
     startFrom: Date;
+    duration?: number;
   }): Promise<{
     availableSlots: Array<{
       date: string;
@@ -137,8 +138,6 @@ export class SQLiteReservationTool implements IReservationTool {
     }>;
   }> {
     try {
-      const isoDate = format(options.startFrom, 'yyyy-MM-dd');
-      
       // 시간대별 시작/종료 시간 설정
       const timeRanges = {
         morning: { start: '09:00', end: '12:00' },
@@ -147,30 +146,74 @@ export class SQLiteReservationTool implements IReservationTool {
       };
 
       const range = timeRanges[options.timeRange];
-      const startDateTime = DateUtils.toReservationDateTime(new Date(isoDate), range.start);
-      const endDateTime = DateUtils.toReservationDateTime(new Date(isoDate), range.end);
+      
+      // 현재 시간이 영업 시간 이후라면 다음 영업일로 설정
+      const now = new Date();
+      let searchDate = new Date(options.startFrom);
+      
+      if (now.getHours() >= 18) {
+        searchDate.setDate(searchDate.getDate() + 1);
+        searchDate.setHours(9, 0, 0, 0);
+      } else if (now.getHours() < 9) {
+        searchDate.setHours(9, 0, 0, 0);
+      }
+
+      // ISO 문자열로 변환
+      const searchDateStr = searchDate.toISOString();
+
+      logger.log('findNextAvailable 요청:', {
+        searchDate: searchDateStr,
+        preferredRoom: options.preferredRoom,
+        timeRange: options.timeRange,
+        duration: options.duration
+      });
 
       const response = await fetch('/api/reservation/find-next', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          startTime: startDateTime,
-          endTime: endDateTime,
-          preferredRoom: options.preferredRoom
+          startTime: searchDateStr,
+          endTime: new Date(searchDate.setHours(18, 0, 0, 0)).toISOString(),
+          preferredRoom: options.preferredRoom,
+          duration: options.duration
         })
       });
 
       if (!response.ok) {
-        throw new Error('가용성 확인 실패');
+        const errorData = await response.json();
+        throw new Error(errorData.error || '가용성 확인 실패');
       }
 
       const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || '가용성 확인 실패');
+      }
+
+      // 결과가 비어있으면 다음 영업일 검색
+      if (result.data.availableSlots.length === 0) {
+        const nextBusinessDay = this.getNextBusinessDay(searchDate);
+        return this.findNextAvailable({
+          ...options,
+          startFrom: nextBusinessDay
+        });
+      }
+
       return result.data;
 
     } catch (error) {
       logger.error('findNextAvailable 에러:', error);
       throw error;
     }
+  }
+
+  private getNextBusinessDay(date: Date): Date {
+    const result = new Date(date);
+    do {
+      result.setDate(result.getDate() + 1);
+      result.setHours(9, 0, 0, 0);
+    } while (result.getDay() === 0 || result.getDay() === 6);
+    return result;
   }
 
   async createButtonReservation(info: {
@@ -237,7 +280,7 @@ export class SQLiteReservationTool implements IReservationTool {
 
       if (!result.ok) {
         const errorData = await result.json();
-        throw new Error(errorData.error || '방 검색에 실패���습니다.');
+        throw new Error(errorData.error || '방 검색에 실패했습니다.');
       }
 
       const responseData = await result.json();
