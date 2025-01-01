@@ -106,7 +106,7 @@ export class ReservationTools {
                             `날짜: ${nextSlot.date}`,
                             `시간: ${nextSlot.startTime}`,
                             `토론방: ${nextRoomId}번`,
-                            `예약자: ${userName || "임시예약"}`,
+                            `예약자: ${userName || "윤지환"}`,
                             `사용시간: 1시간`,
                             `회의내용: 자동예약`
                           ]
@@ -119,7 +119,7 @@ export class ReservationTools {
                       startTime: nextSlot.startTime,
                       duration: 1,
                       roomId: nextRoomId,
-                      userName: userName || "임시예약",
+                      userName: userName || "윤지환",
                       content: "자동예약"
                     },
                     isNextDay: nextSlot.date !== targetDate.toISOString().split('T')[0]
@@ -141,7 +141,7 @@ export class ReservationTools {
               startTime: firstSlot.startTime,
               duration, // 사용자가 지정한 시간 사용
               roomId,
-              userName: userName || "임시예약",
+              userName: userName || "윤지환",
               content: "자동예약"
             };
 
