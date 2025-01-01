@@ -17,31 +17,34 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Debugging
+      - name: Debug Environment Variables
         run: |
-          echo "$JSON_PAYLOAD"
-          curl -v https://api.openai.com/v1/chat/completions \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $OPENAI_API_KEY" \
-            -d "$JSON_PAYLOAD"
-  
+          echo "Event name: ${{ github.event_name }}"
+          echo "PR number: ${{ github.event.pull_request.number }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Base ref: ${{ github.event.pull_request.base.ref }}"
+          echo "Head ref: ${{ github.event.pull_request.head.ref }}"
+
       - name: Debug OPENAI_API_KEY
         run: |
           if [ -z "$OPENAI_API_KEY" ]; then
             echo "OPENAI_API_KEY is not set or empty!"
             exit 1
           else
-            echo "OPENAI_API_KEY is set."
+            echo "OPENAI_API_KEY is set and valid."
           fi
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
-      # 확장자 필터를 추가하여 .ts, .tsx, .json, .yml, .sql, .prisma 파일만 포함하도록 설정
       - name: Fetch PR Diff
         run: |
           git fetch origin +refs/pull/${{ github.event.pull_request.number }}/merge
           git diff origin/${{ github.event.pull_request.base.ref }}...origin/${{ github.event.pull_request.head.ref }} \
           -- '*.ts' '*.tsx' '*.json' '*.yml' '*.sql' '*.prisma' > pr_diff.txt
+          
+          # 디버깅을 위한 diff 파일 크기 확인
+          echo "Diff file size: $(wc -c < pr_diff.txt) bytes"
+          echo "Diff file line count: $(wc -l < pr_diff.txt) lines"
 
       - name: Read Prompt file
         id: prompt
@@ -65,7 +68,7 @@ jobs:
           ----- PR DIFF END -----
           EOF
 
-      - name: Run GPT Code Review Once via curl
+      - name: Run GPT Code Review
         id: gpt_call
         run: |
           set -euo pipefail
@@ -86,12 +89,23 @@ jobs:
             "max_tokens": 16384
           }' combined_prompt.txt)
 
+          echo "Sending request to OpenAI API..."
+          
           RESPONSE=$(curl -fsS https://api.openai.com/v1/chat/completions \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $OPENAI_API_KEY" \
             -d "$JSON_PAYLOAD")
 
-          CONTENT=$(echo "$RESPONSE" | jq -r -e '.choices[0].message.content')
+          echo "Response received from OpenAI API"
+          
+          # Response 내용 검증
+          if ! echo "$RESPONSE" | jq -e '.choices[0].message.content' > /dev/null; then
+            echo "Error: Invalid response format from OpenAI API"
+            echo "Response: $RESPONSE"
+            exit 1
+          fi
+
+          CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
 
           {
             echo "content<<EOF"
@@ -103,19 +117,45 @@ jobs:
 
       - name: Post comment on PR
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            prNumber=${{ github.event.pull_request.number }}
-          else
-            prNumber=${{ github.event.inputs.pr_number }}
+          # PR 번호 직접 사용
+          prNumber="${{ github.event.pull_request.number }}"
+          
+          echo "Debug: Event name = ${{ github.event_name }}"
+          echo "Debug: PR number = $prNumber"
+          echo "Debug: Repository = ${{ github.repository }}"
+          
+          if [ -z "$prNumber" ]; then
+            echo "Error: PR number is empty"
+            exit 1
           fi
-
-          BODY=$(printf %s "${{ steps.gpt_call.outputs.content }}" | jq -Rs .)
-
-          curl -sS \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
+          
+          # GPT 응답 내용 확인
+          CONTENT="${{ steps.gpt_call.outputs.content }}"
+          if [ -z "$CONTENT" ]; then
+            echo "Error: No content to post"
+            exit 1
+          fi
+          
+          # Comment 생성 (이스케이프 처리 개선)
+          BODY=$(echo "$CONTENT" | jq -R -s '.')
+          
+          # API 요청 실행
+          RESPONSE=$(curl -sS \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             -X POST \
-            -d "{\"body\": ${BODY}}" \
-            "https://api.github.com/repos/${{ github.repository }}/issues/${prNumber}/comments"
+            -d "{\"body\": $BODY}" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/${prNumber}/comments")
+          
+          # API 응답 확인 및 디버깅
+          echo "Debug: API Response = $RESPONSE"
+          
+          if echo "$RESPONSE" | jq -e '.id' > /dev/null; then
+            echo "Successfully posted comment to PR"
+          else
+            echo "Error posting comment to PR"
+            echo "Response: $RESPONSE"
+            exit 1
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
