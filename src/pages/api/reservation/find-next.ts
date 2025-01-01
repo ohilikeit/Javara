@@ -40,13 +40,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // 현재 시간이 영업 시간(9시-18시) 이후라면 다음 영업일 9시로 설정
     const now = new Date();
-    if (now.getHours() >= 18) {
-      searchStartTime.setDate(searchStartTime.getDate() + 1);
+    
+    // 시작 시간이 현재 날짜인 경우에만 시간 조정
+    if (searchStartTime.toDateString() === now.toDateString()) {
+      if (now.getHours() >= 18) {
+        // 현재가 영업 종료 이후면 다음 날 9시로
+        searchStartTime.setDate(searchStartTime.getDate() + 1);
+        searchStartTime.setHours(9, 0, 0, 0);
+        searchEndTime.setDate(searchEndTime.getDate() + 1);
+        searchEndTime.setHours(18, 0, 0, 0);
+      } else if (now.getHours() < 9) {
+        // 현재가 영업 시작 전이면 당일 9시로
+        searchStartTime.setHours(9, 0, 0, 0);
+      } else {
+        // 영업 시간 중이면 현재 시간으로
+        searchStartTime.setMinutes(0, 0, 0);
+      }
+    } else {
+      // 미래 날짜인 경우 항상 9시부터 시작
       searchStartTime.setHours(9, 0, 0, 0);
-      searchEndTime.setDate(searchEndTime.getDate() + 1);
       searchEndTime.setHours(18, 0, 0, 0);
-    } else if (now.getHours() < 9) {
-      searchStartTime.setHours(9, 0, 0, 0);
     }
 
     // 기존 예약 확인

@@ -231,11 +231,13 @@ export class ChatService {
 
   private async handleError(error: unknown, onStream: (token: string) => void): Promise<string> {
     logger.error('Error in processMessage:', error);
-    let response = "송합니다. 처리 중 오류가 발생했습니다.";
+    let response = "죄송합니다. 처리 중 오류가 발생했습니다.";
     
     if (error instanceof Error) {
         if (error.message.includes('2주')) {
             response = "예약은 오늘부터 2주 이내만 가능합니다. 다른 날짜를 선택해주세요.";
+        } else if (error.message.includes('schema')) {
+            response = "죄송합니다. 예약 정보가 올바르지 않습니다. 다시 한 번 말씀해 주시겠어요?";
         }
     }
 

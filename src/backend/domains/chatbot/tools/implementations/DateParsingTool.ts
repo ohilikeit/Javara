@@ -5,30 +5,7 @@ import { DateUtils } from '@/backend/domains/chatbot/utils/dateUtils';
 
 export class DateParsingTool {  
   static async parseDateString(input: string, currentDate: Date = new Date()): Promise<{ date: Date | null; confidence: number; reasoning: string }> {
-    try {
-      if (input.includes('다음주')) {
-        const dayMatch = input.match(/(월|화|수|목|금)요일/);
-        if (dayMatch) {
-          const dayMap: { [key: string]: number } = {
-            '월': 1, '화': 2, '수': 3, '목': 4, '금': 5
-          };
-          const today = new Date();
-          const nextWeek = new Date(today);
-          nextWeek.setDate(today.getDate() + 7);
-          
-          // 다음주 해당 요일 계산
-          const targetDay = dayMap[dayMatch[1]];
-          const daysToAdd = (targetDay + 7 - nextWeek.getDay()) % 7;
-          nextWeek.setDate(nextWeek.getDate() + daysToAdd);
-          
-          return {
-            date: nextWeek,
-            confidence: 0.9,
-            reasoning: `다음주 ${dayMatch[1]}요일로 해석됨`
-          };
-        }
-      }
-      
+    try {      
       // 주차 정보 계산
       const currentWeekStart = startOfDay(addDays(currentDate, -getDay(currentDate))); // 일요일
       const currentWeekEnd = addDays(currentWeekStart, 6); // 토요일
@@ -72,11 +49,25 @@ export class DateParsingTool {
                - confidence를 0.8 이상으로 설정
               
             # 응답 예시
-            사용자 입력: "다음주 목요일 예약 돼?"
+            1. 사용자 입력: "다음주 목요일 예약 돼?"
+            Data: {
+              "date": "2025-01-09",
+              "confidence": 0.9,
+              "reasoning": "입력된 텍스트에서 '다음주 목욜일'이라는 표현이 있습니다. '다음주'는 2025년 1월 5일(일)부터 2025년 1월 11일(토)까지의 기간을 의미하며, 이 기간 내의 목요일은 2025년 01월 09일입니다. 따라서 날짜는 2025년 01월 09일로 설정하였습니다."
+            }
+
+            2. 사용자 입력: "오늘 가장 빠른 시간으로 예약해줘"
             Data: {
               "date": "2025-01-02",
               "confidence": 0.9,
-              "reasoning": "입력된 텍스트에서 '다음주 목욜일'이라는 표현이 있습니다. '다음주'는 2024년 12월 29일(일)부터 2025년 01월 04일(토)까지의 기간을 의미하며, 이 기간 내의 목요일은 2025년 01월 02일입니다. 따라서 날짜는 2025년 01월 02일로 설정하였습니다."
+              "reasoning": "입력된 텍스트에서 '오늘'이라는 표현이 있습니다. 오늘은 2025년 1월 2일이기 때문에 날짜는 2025년 1월 2일로 설정하였습니다."
+            }
+
+            3. 사용자 입력: "다다음주 월요일 예약 돼?"
+            Data: {
+              "date": "2025-01-12",
+              "confidence": 0.9,
+              "reasoning": "입력된 텍스트에서 '다다음주 월요일'이라는 표현이 있습니다. '다다음주'는 2025년 1월 12일(일)부터 2025년 1월 18일(토)까지의 기간을 의미하며, 이 기간 내의 월요일은 2025년 01월 13일입니다. 따라서 날짜는 2025년 01월 13일로 설정하였습니다."
             }
 
             # 응답 형식:
