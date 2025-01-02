@@ -50,8 +50,8 @@ export class ChatService {
     try {
       this.model = new ChatOpenAI({
         openAIApiKey: apiKey,
-        modelName: "gpt-4o-mini",
-        temperature: 0.7,
+        modelName: "gpt-4o",
+        temperature: 0,
         streaming: true,
       });
       logger.log('ChatOpenAI 모델 초기화 성공');

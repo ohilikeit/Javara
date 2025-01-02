@@ -30,8 +30,8 @@ export class OpenAIChatRepository implements IChatRepository {
 
       this.model = new ChatOpenAI({
         openAIApiKey: apiKey,
-        modelName: "gpt-4o-mini",
-        temperature: 0.7,
+        modelName: "gpt-4o",
+        temperature: 0,
         streaming: true,
       });
 
