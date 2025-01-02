@@ -1,60 +1,33 @@
 // src/backend/domains/chatbot/utils/dateUtils.ts
-import { format, parse, addHours } from 'date-fns';
+import { format, parse, addHours, setHours, setMinutes } from 'date-fns';
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 import { ParsedDateTime, ReservationDateString } from '../types/DateTypes';
+import { logger } from '@/utils/logger';
 
 const TIMEZONE = 'Asia/Seoul';
 
 export class DateUtils {
   // ISO 형식(YYYY-MM-DD)과 시간(HH:mm)을 예약 시스템 형식(YYYYMMDDHHMM)으로 변환
-  static toReservationDateTime(date: string | Date | number, time?: string): ReservationDateString {
+  static toReservationDateTime(date: Date | string, time?: string): string {
     try {
-      let datetime: Date;
-
-      if (date instanceof Date) {
-        datetime = date;
-      } else if (typeof date === 'string') {
-        if (date.length === 12 && /^\d{12}$/.test(date)) { // YYYYMMDDHHMM 형식
-          const year = parseInt(date.substring(0, 4));
-          const month = parseInt(date.substring(4, 6)) - 1;
-          const day = parseInt(date.substring(6, 8));
-          const hour = parseInt(date.substring(8, 10));
-          const minute = parseInt(date.substring(10, 12));
-          datetime = new Date(year, month, day, hour, minute);
-        } else if (time && date.includes('-')) { // YYYY-MM-DD 형식 + HH:mm
-          const [year, month, day] = date.split('-').map(Number);
-          const [hour, minute] = time.split(':').map(Number);
-          
-          if (!year || !month || !day || isNaN(hour) || isNaN(minute)) {
-            throw new Error('Invalid date or time format');
-          }
-          datetime = new Date(year, month - 1, day, hour, minute);
-        } else {
-          throw new Error('Invalid date string format');
-        }
-      } else if (typeof date === 'number' && date.toString().length === 12) {
-        // 숫자형 YYYYMMDDHHMM 처리
-        const dateStr = date.toString();
-        const year = parseInt(dateStr.substring(0, 4));
-        const month = parseInt(dateStr.substring(4, 6)) - 1;
-        const day = parseInt(dateStr.substring(6, 8));
-        const hour = parseInt(dateStr.substring(8, 10));
-        const minute = parseInt(dateStr.substring(10, 12));
-        datetime = new Date(year, month, day, hour, minute);
-      } else {
-        throw new Error('Invalid date format or type');
+      const targetDate = typeof date === 'string' ? new Date(date) : date;
+      const dateStr = format(targetDate, 'yyyyMMdd');
+      
+      // 시간이 제공된 경우 HH:mm 형식에서 HHMM 형식으로 변환
+      if (time) {
+        const timeStr = time.replace(':', '');
+        return `${dateStr}${timeStr}`;
       }
-
-      // 날짜가 유효한지 확인
-      if (isNaN(datetime.getTime())) {
-        throw new Error('Invalid datetime');
-      }
-
-      // YYYYMMDDHHMM 형식으로 변환
-      return format(datetime, 'yyyyMMddHHmm');
+      
+      // 시간이 제공되지 않은 경우 기본값 '0900' 사용
+      return `${dateStr}0900`;
     } catch (error) {
-      console.error('Error in toReservationDateTime:', error);
-      throw error;
+      logger.error('예약 시간 변환 실패:', {
+        date,
+        time,
+        error
+      });
+      throw new Error('예약 시간 변환에 실패했습니다.');
     }
   }
 
@@ -128,5 +101,34 @@ export class DateUtils {
   static formatToKoreanTime(time: string): string {
     const [hours, minutes] = time.split(':');
     return `${parseInt(hours)}시${minutes === '00' ? '' : ` ${minutes}분`}`;
+  }
+
+  static formatDateTime(date: Date | string, time: string): string {
+    try {
+      const targetDate = typeof date === 'string' ? new Date(date) : date;
+      const [hours, minutes] = time.split(':').map(Number);
+      
+      const formattedDate = format(targetDate, 'yyyyMMdd');
+      const formattedTime = this.formatToTimeString(hours, minutes);
+      
+      return `${formattedDate}${formattedTime}`;
+    } catch (error) {
+      logger.error('날짜/시간 형식 변환 실패:', error);
+      throw new Error('날짜/시간 형식 변환에 실패했습니다.');
+    }
+  }
+
+  static isValidTimeFormat(timeStr: string): boolean {
+    return /^\d{12}$/.test(timeStr);  // yyyyMMddHHmm 형식 검증
+  }
+
+  static addHours(time: string, hours: number): string {
+    const [h, m] = time.split(':').map(Number);
+    const newHour = (h + hours) % 24;
+    return `${newHour.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  }
+
+  static formatToTimeString(hours: number, minutes: number): string {
+    return `${hours.toString().padStart(2, '0')}${minutes.toString().padStart(2, '0')}`;
   }
 }
