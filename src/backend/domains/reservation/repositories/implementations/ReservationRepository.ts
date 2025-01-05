@@ -43,15 +43,19 @@ export class ReservationRepository implements ReservationInterfaceRepository {
     }
 
     async getTodayReservations(): Promise<ReservationEntity[]> {
-        const today = new Date();
+        const utcDate = new Date();
+        const today = new Date(utcDate.getTime() + (9 * 60 * 60 * 1000));
         const formattedDate = today.toISOString().split('T')[0].replace(/-/g, '');
         console.log(formattedDate);
+
+        
         try {
             const reservations = await this.prisma.reservation.findMany({
                 where: {
                     startTime: {
                         startsWith: formattedDate,
                     },
+                    status: 1,
                 },
             });
 
