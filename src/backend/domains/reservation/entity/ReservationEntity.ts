@@ -29,6 +29,9 @@ export class ReservationEntity {
     @Column()
     public regdate: Date;
 
+    @Column({ nullable: true })
+    public duration: number;
+
     constructor(
         reservationId: number,
         userId: number,
@@ -38,7 +41,8 @@ export class ReservationEntity {
         startTime: string,
         endTime: string,
         status: number,
-        regdate: Date
+        regdate: Date,
+        duration?: number
     ) {
         this.reservationId = reservationId;
         this.userId = userId;
@@ -49,6 +53,7 @@ export class ReservationEntity {
         this.endTime = endTime;
         this.status = status;
         this.regdate = regdate;
+        this.duration = duration ?? 0;
     }
 
     // Getters
