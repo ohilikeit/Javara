@@ -124,4 +124,61 @@ export class ReservationRepository implements ReservationInterfaceRepository {
             throw new Error(`Failed to fetch reservations by time: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
+
+    async getReservationsByDate(date: string): Promise<ReservationEntity[]> {
+        try {
+            // 날짜 형식을 YYYYMMDD로 변환
+            const formattedDate = date.replace(/-/g, '');
+            
+            const reservations = await this.prisma.reservation.findMany({
+                where: {
+                    startTime: {
+                        startsWith: formattedDate,
+                    },
+                    status: 1  // 활성 상태인 예약만 조회
+                },
+                orderBy: {
+                    startTime: 'asc'
+                }
+            });
+
+            // 예약 엔티티 생성 시 시작 시간과 종료 시간을 모두 포함
+            return reservations.map(reservation => {
+                // YYYYMMDDHHMM 형식의 시간 문자열을 Date 객체로 변환
+                const startTime = new Date(
+                    parseInt(reservation.startTime.substring(0, 4)),
+                    parseInt(reservation.startTime.substring(4, 6)) - 1,
+                    parseInt(reservation.startTime.substring(6, 8)),
+                    parseInt(reservation.startTime.substring(8, 10)),
+                    parseInt(reservation.startTime.substring(10, 12))
+                );
+                
+                const endTime = new Date(
+                    parseInt(reservation.endTime.substring(0, 4)),
+                    parseInt(reservation.endTime.substring(4, 6)) - 1,
+                    parseInt(reservation.endTime.substring(6, 8)),
+                    parseInt(reservation.endTime.substring(8, 10)),
+                    parseInt(reservation.endTime.substring(10, 12))
+                );
+
+                // 시간 차이를 시간 단위로 계산 (소수점 올림)
+                const duration = Math.ceil((endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60));
+
+                return new ReservationEntity(
+                    reservation.id,
+                    reservation.userId,
+                    reservation.roomId,
+                    reservation.userName,
+                    reservation.content ?? '',
+                    reservation.startTime,
+                    reservation.endTime,
+                    reservation.status,
+                    reservation.createdAt,
+                    duration
+                );
+            });
+        } catch (error) {
+            throw new Error(`Failed to fetch reservations by date: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
 }

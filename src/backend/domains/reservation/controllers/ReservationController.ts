@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Post, Body } from '@nestjs/common';
+import { Controller, Get, Query, Post, Body, Param } from '@nestjs/common';
 import { ReservationService } from '../service/ReservationService';
 import { logger } from '../../../utils/logger';
 import { CreateReservationDTO } from '../dto/CreateReservationDTO';
@@ -38,6 +38,17 @@ export class ReservationController {
       return await this.reservationService.createReservation(createReservationDTO);
     } catch (error) {
       logger.error('createReservation 에러:', error);
+      throw error;
+    }
+  }
+
+  @Get('date/:date')
+  async getReservationsByDate(@Param('date') date: string) {
+    try {
+      logger.log('getReservationsByDate 컨트롤러 호출:', { date });
+      return await this.reservationService.getReservationsByDate(date);
+    } catch (error) {
+      logger.error('getReservationsByDate 에러:', error);
       throw error;
     }
   }
