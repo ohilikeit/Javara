@@ -34,4 +34,8 @@ export class ReservationService {
         
         return await this.reservationRepository.createReservation(newReservation);
     }
+
+    async getReservationsByDate(date: string): Promise<ReservationEntity[]> {
+        return await this.reservationRepository.getReservationsByDate(date);
+    }
 } 

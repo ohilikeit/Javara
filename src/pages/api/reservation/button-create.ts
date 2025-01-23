@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { logger } from '@/utils/logger';
+import { format } from 'date-fns';
 
 const prisma = new PrismaClient();
 
@@ -52,14 +53,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               OR: [
                 {
                   AND: [
-                    { startTime: { lte: startDateTime } },
-                    { endTime: { gt: startDateTime } }
+                    { startTime: { lte: format(startDateTime, 'yyyyMMddHHmm') } },
+                    { endTime: { gt: format(startDateTime, 'yyyyMMddHHmm') } }
                   ]
                 },
                 {
                   AND: [
-                    { startTime: { lt: endDateTime } },
-                    { endTime: { gte: endDateTime } }
+                    { startTime: { lt: format(endDateTime, 'yyyyMMddHHmm') } },
+                    { endTime: { gte: format(endDateTime, 'yyyyMMddHHmm') } }
                   ]
                 }
               ]
@@ -75,13 +76,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // 예약 생성 (userId 하드코딩)
       return await tx.reservation.create({
         data: {
-          startTime: startDateTime,
-          endTime: endDateTime,
+          startTime: format(startDateTime, 'yyyyMMddHHmm'),
+          endTime: format(endDateTime, 'yyyyMMddHHmm'),
           content: "회의",
           status: 1,
           userName: userName,
           roomId: Number(roomId),
-          userId: 1  // 하드코딩된 userId
+          userId: 1
         }
       });
     });

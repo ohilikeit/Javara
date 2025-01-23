@@ -5,7 +5,8 @@ import { ReservationTools } from '../../tools/ToolDefinitions';
 import { SQLiteReservationTool } from '../../tools/implementations/SQLiteReservationTool';
 import { AgentExecutor, createOpenAIFunctionsAgent } from "langchain/agents";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { ChatSessionEntity, ReservationInfo } from '../entity/ChatSessionEntity';
+import { ChatSessionEntity } from '../../entity/ChatSessionEntity';
+import { ReservationInfo } from '../../types/ReservationTypes';
 import { RunnableSequence } from "@langchain/core/runnables";
 import { formatToOpenAIFunctionMessages } from "langchain/agents/format_scratchpad";
 import { AgentStep } from "@langchain/core/agents";
@@ -29,8 +30,8 @@ export class OpenAIChatRepository implements IChatRepository {
 
       this.model = new ChatOpenAI({
         openAIApiKey: apiKey,
-        modelName: "gpt-4o-mini",
-        temperature: 0.7,
+        modelName: "gpt-4o",
+        temperature: 0,
         streaming: true,
       });
 
@@ -185,7 +186,7 @@ export class OpenAIChatRepository implements IChatRepository {
     return contextParts.join('\n');
   }
 
-  // 대화 히스토리 ���리 메서드 추가
+  // 대화 히스토리 관리 메서드 추가
   public clearHistory(): void {
     this.messageHistory = [this.messageHistory[0]]; // 시스템 프롬프트만 유지
   }

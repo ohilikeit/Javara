@@ -8,9 +8,6 @@ import { Button } from "../components/ui/button"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from "../components/ui/dialog"
 import { ChatInterface } from "../components/chat/ChatInterface"
@@ -187,19 +184,15 @@ export default function Component() {
                     variant="outline"
                     size="lg"
                     className="absolute bottom-[25%] left-[13%] bg-[#F6B352] text-white hover:bg-[#FFD699] transition-all shadow-md w-12 h-12 rounded-full"
-                    aria-label="모든 토론방 예약 현황"
+                    aria-label="토론방 예약 현황"
                   >
                     <Clock className="h-8 w-8" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-4xl">
-                  <DialogHeader>
-                    <DialogTitle className="text-center">모든 토론방 예약 현황</DialogTitle>
-                    <DialogDescription className="text-center">
-                      {today.getFullYear()}년 {today.getMonth() + 1}월 {today.getDate()}일 ({days[today.getDay()]})
-                    </DialogDescription>
-                  </DialogHeader>
-                  <AllRoomsTimetable />
+                <DialogContent className="max-w-4xl w-[50%] h-[80vh] p-2">
+                  <div className="flex-1 overflow-auto">
+                    <AllRoomsTimetable />
+                  </div>
                 </DialogContent>
               </Dialog>
 
